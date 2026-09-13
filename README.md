@@ -1,36 +1,43 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# WhyAlligator
 
-## Getting Started
+Y Combinator accepts 1%. We accept the other 99%.
 
-First, run the development server:
+A satirical startup directory. The homepage is a YC-style companies list. Anyone can add a company for a flat **$20** via Stripe. After payment, the company goes live immediately (newest first) and the founder gets a Resend confirmation email.
+
+## Stack
+
+- Next.js App Router
+- Supabase (Postgres + Storage)
+- Stripe Checkout
+- Resend
+- Cloudflare Workers via OpenNext (`@opennextjs/cloudflare`)
+
+## Setup
+
+1. Copy `.env.example` to `.env.local` and fill in keys.
+2. In Supabase, run `supabase/schema.sql` and create a public Storage bucket named `logos`.
+3. Add Stripe and Resend keys to `.env.local` so checkout and confirmation email work.
+4. Create a Stripe webhook pointing at `/api/webhooks/stripe` for `checkout.session.completed`.
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Directory pages revalidate every 60 seconds so the homepage can stay cached under a traffic spike. The Stripe webhook also calls `revalidatePath("/")` and the company page.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Clicking a company opens `/companies/[slug]`, a YC-style profile with about copy, founders, jobs, and a metadata sidebar. The add-startup form collects those fields.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Out of scope (on purpose)
 
-## Learn More
+## Deploy to Cloudflare Workers
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm run deploy
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Set the same environment variables in the Worker dashboard (or `wrangler secret`). Stripe webhooks must use the production URL.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Out of scope (on purpose)
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Certificates, AI copy, ranking / Top Companies, rejection counts, screenshot uploads.
