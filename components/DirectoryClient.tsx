@@ -1,8 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { Company } from "@/lib/types";
-import { companyAnchor, teamSizeNumber } from "@/lib/companies";
+import { companyAnchor, companyPath, teamSizeNumber } from "@/lib/companies";
 import { CompanyCard } from "./CompanyCard";
 
 type SortKey = "newest" | "oldest" | "name";
@@ -12,6 +13,7 @@ export function DirectoryClient({ companies }: { companies: Company[] }) {
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const [hiringOnly, setHiringOnly] = useState(false);
   const [nonprofitOnly, setNonprofitOnly] = useState(false);
+  const [topCompaniesOnly, setTopCompaniesOnly] = useState(false);
   const [batches, setBatches] = useState<string[]>([]);
   const [industries, setIndustries] = useState<string[]>([]);
   const [regions, setRegions] = useState<string[]>([]);
@@ -58,12 +60,15 @@ export function DirectoryClient({ companies }: { companies: Company[] }) {
 
   const hiringCount = companies.filter((c) => c.jobs.length > 0).length;
   const nonprofitCount = companies.filter((c) => c.is_nonprofit).length;
+  const topCompanyCount = companies.filter((c) => c.is_top_company).length;
+  const topCompanies = companies.filter((c) => c.is_top_company);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     const rows = companies.filter((c) => {
       if (hiringOnly && c.jobs.length === 0) return false;
       if (nonprofitOnly && !c.is_nonprofit) return false;
+      if (topCompaniesOnly && !c.is_top_company) return false;
       if (batches.length && !batches.includes(c.batch)) return false;
       if (industries.length && !c.industries.some((tag) => industries.includes(tag))) {
         return false;
@@ -88,6 +93,7 @@ export function DirectoryClient({ companies }: { companies: Company[] }) {
     query,
     hiringOnly,
     nonprofitOnly,
+    topCompaniesOnly,
     batches,
     industries,
     regions,
@@ -98,24 +104,51 @@ export function DirectoryClient({ companies }: { companies: Company[] }) {
 
   const filterPanel = (
     <aside className="filter-panel" aria-label="Filters">
-      <label className="check-row">
-        <input
-          type="checkbox"
-          checked={hiringOnly}
-          onChange={(e) => setHiringOnly(e.target.checked)}
-        />
-        <span>Is Hiring</span>
-        <em>{hiringCount}</em>
-      </label>
-      <label className="check-row">
-        <input
-          type="checkbox"
-          checked={nonprofitOnly}
-          onChange={(e) => setNonprofitOnly(e.target.checked)}
-        />
-        <span>Nonprofit</span>
-        <em>{nonprofitCount}</em>
-      </label>
+      <div className="filter-section filter-section-first">
+        <h4>Highlights</h4>
+        <label className="check-row">
+          <input
+            type="checkbox"
+            checked={hiringOnly}
+            onChange={(e) => setHiringOnly(e.target.checked)}
+          />
+          <span>Is Hiring</span>
+          <em>{hiringCount}</em>
+        </label>
+        <label className="check-row">
+          <input
+            type="checkbox"
+            checked={nonprofitOnly}
+            onChange={(e) => setNonprofitOnly(e.target.checked)}
+          />
+          <span>Nonprofit</span>
+          <em>{nonprofitCount}</em>
+        </label>
+      </div>
+
+      <div className="filter-section">
+        <h4>Top Companies</h4>
+        <label className="check-row">
+          <input
+            type="checkbox"
+            checked={topCompaniesOnly}
+            onChange={(e) => setTopCompaniesOnly(e.target.checked)}
+          />
+          <span>Show top companies</span>
+          <em>{topCompanyCount}</em>
+        </label>
+        {topCompanies.length === 0 ? (
+          <p className="filter-note">No top companies listed yet.</p>
+        ) : (
+          <ul className="top-company-list">
+            {topCompanies.map((company) => (
+              <li key={company.id}>
+                <Link href={companyPath(company)}>{company.company_name}</Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
 
       <FilterGroup
         title="Batch"

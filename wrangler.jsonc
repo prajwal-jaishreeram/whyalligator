@@ -4,6 +4,13 @@
   "name": "whyalligator",
   "compatibility_date": "2025-12-30",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "workers_dev": true,
+  "preview_urls": true,
+  "vars": {
+    "NEXT_PUBLIC_SUPABASE_URL": "https://sgfgsmoclawrjkdzgyqa.supabase.co",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNnZmdzbW9jbGF3cmprZHpneXFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMDM5OTQsImV4cCI6MjEwNDg3OTk5NH0.QTWibzIwaee0DfL8PlWqglUTiA_lXDrnX8p3Iy9QbWg",
+    "NEXT_PUBLIC_SITE_URL": "https://whyalligator.concurfast-prajwal.workers.dev"
+  },
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"

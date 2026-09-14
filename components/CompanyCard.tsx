@@ -41,6 +41,9 @@ export function CompanyCard({
         <p className="company-pitch">{company.pitch}</p>
         <div className="pill-row">
           <span className="pill pill-batch">{company.batch}</span>
+          {company.is_top_company ? (
+            <span className="pill pill-top">Top company</span>
+          ) : null}
           {company.industries.slice(0, 3).map((tag) => (
             <span className="pill" key={tag}>
               {tag}

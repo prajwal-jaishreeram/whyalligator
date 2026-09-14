@@ -169,10 +169,16 @@ export function AddStartupForm() {
           <input name="twitter_url" placeholder="https://x.com/..." />
         </label>
       </div>
-      <label className="check-row">
-        <input name="is_nonprofit" type="checkbox" />
-        <span>This is a nonprofit</span>
-      </label>
+      <div className="form-checks">
+        <label className="form-check">
+          <input name="is_nonprofit" type="checkbox" />
+          This is a nonprofit
+        </label>
+        <label className="form-check">
+          <input name="is_top_company" type="checkbox" />
+          This is a top company
+        </label>
+      </div>
       <label>
         Primary partner
         <input name="primary_partner" placeholder="Leave blank and we will put You" />

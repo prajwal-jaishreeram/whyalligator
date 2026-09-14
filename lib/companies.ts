@@ -2,7 +2,7 @@ import { hasSupabaseConfig, createAnonClient } from "./supabase";
 import type { Company, Job } from "./types";
 
 const SELECT_FIELDS =
-  "id, slug, company_name, pitch, description, website_url, logo_url, email, location, founded_year, team_size, batch, activity_status, industries, linkedin_url, twitter_url, primary_partner, founders, jobs, hq_region, is_nonprofit, created_at, status";
+  "id, slug, company_name, pitch, description, website_url, logo_url, email, location, founded_year, team_size, batch, activity_status, industries, linkedin_url, twitter_url, primary_partner, founders, jobs, hq_region, is_nonprofit, is_top_company, created_at, status";
 
 function normalizeCompany(
   row: Partial<Company> & { id: string; company_name: string },
@@ -29,6 +29,7 @@ function normalizeCompany(
     jobs: row.jobs ?? [],
     hq_region: row.hq_region || "Remote",
     is_nonprofit: Boolean(row.is_nonprofit),
+    is_top_company: Boolean(row.is_top_company),
     created_at: row.created_at || new Date().toISOString(),
     status: "live",
   };
@@ -47,8 +48,16 @@ export async function getLiveCompanies(): Promise<Company[]> {
     .order("created_at", { ascending: false });
 
   if (error) {
-    console.error("Failed to load companies", error);
-    return [];
+    const retry = await supabase
+      .from("companies")
+      .select(SELECT_FIELDS.replace(", is_top_company", ""))
+      .eq("status", "live")
+      .order("created_at", { ascending: false });
+    if (retry.error) {
+      console.error("Failed to load companies", retry.error);
+      return [];
+    }
+    return (retry.data ?? []).map((row) => normalizeCompany(row as Company));
   }
 
   return (data ?? []).map((row) => normalizeCompany(row as Company));

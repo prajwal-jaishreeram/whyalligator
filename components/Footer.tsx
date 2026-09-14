@@ -60,12 +60,31 @@ export function Footer() {
               <li>
                 <Link href="/terms">Terms of Use</Link>
               </li>
+              <li>
+                <a href="https://x.com/Prajwal_shindee" target="_blank" rel="noreferrer">
+                  X / Twitter
+                </a>
+              </li>
             </ul>
           </div>
         </div>
       </div>
       <div className="footer-bottom">
         <p>© {new Date().getFullYear()} WhyAlligator</p>
+        <a
+          className="footer-x"
+          href="https://x.com/Prajwal_shindee"
+          target="_blank"
+          rel="noreferrer"
+        >
+          <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+            <path
+              fill="currentColor"
+              d="M18.244 2H21.5l-7.5 8.57L22.5 22h-6.59l-5.16-6.74L5.2 22H1.94l8.03-9.17L1.5 2h6.76l4.66 6.18L18.244 2Zm-1.16 18h1.81L7.01 3.91H5.07L17.084 20Z"
+            />
+          </svg>
+          @Prajwal_shindee
+        </a>
       </div>
     </footer>
   );

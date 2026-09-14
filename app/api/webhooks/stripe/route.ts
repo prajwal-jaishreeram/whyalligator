@@ -110,6 +110,7 @@ export async function POST(request: Request) {
       jobs: payload.jobs,
       hq_region: payload.hq_region,
       is_nonprofit: payload.is_nonprofit,
+      is_top_company: payload.is_top_company,
       status: "live",
     })
     .select("id, slug")

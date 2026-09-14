@@ -25,6 +25,7 @@ create table if not exists public.companies (
   jobs jsonb not null default '[]'::jsonb,
   hq_region text not null default 'Remote',
   is_nonprofit boolean not null default false,
+  is_top_company boolean not null default false,
   created_at timestamptz not null default now(),
   status text not null default 'live' check (status = 'live'),
   stripe_session_id text unique
@@ -45,6 +46,7 @@ alter table public.companies add column if not exists founders jsonb not null de
 alter table public.companies add column if not exists jobs jsonb not null default '[]'::jsonb;
 alter table public.companies add column if not exists hq_region text not null default 'Remote';
 alter table public.companies add column if not exists is_nonprofit boolean not null default false;
+alter table public.companies add column if not exists is_top_company boolean not null default false;
 
 create unique index if not exists companies_slug_idx on public.companies (slug);
 create index if not exists companies_created_at_idx on public.companies (created_at desc);

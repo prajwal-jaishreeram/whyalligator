@@ -38,6 +38,7 @@ export type Company = {
   jobs: Job[];
   hq_region: string;
   is_nonprofit: boolean;
+  is_top_company: boolean;
   created_at: string;
   status: "live";
 };

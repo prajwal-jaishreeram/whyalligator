@@ -38,6 +38,7 @@ export function parseListingForm(form: FormData): {
   const primary_partner = String(form.get("primary_partner") ?? "").trim();
   const hq_region = String(form.get("hq_region") ?? "").trim() || "Remote";
   const is_nonprofit = form.get("is_nonprofit") === "on";
+  const is_top_company = form.get("is_top_company") === "on";
 
   if (company_name.length < 2 || company_name.length > 80) {
     return empty("Company name must be between 2 and 80 characters.");
@@ -118,6 +119,7 @@ export function parseListingForm(form: FormData): {
       jobs,
       hq_region,
       is_nonprofit,
+      is_top_company,
     },
   };
 }
@@ -144,6 +146,7 @@ function empty(error: string): { payload: ListingPayload; error: string } {
       jobs: [],
       hq_region: "Remote",
       is_nonprofit: false,
+      is_top_company: false,
     },
   };
 }
