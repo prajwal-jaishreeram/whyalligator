@@ -10,6 +10,8 @@
   --pill: #e6e6dd;
   --orange: #ff6600;
   --search-border: #cccccc;
+  --font-outfit: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-source-serif: "Source Serif 4", Georgia, "Times New Roman", serif;
 }
 
 * {
