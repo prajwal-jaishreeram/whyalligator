@@ -181,7 +181,7 @@ export function Header() {
           <Link href="/partners" onClick={close}>Partners</Link>
           <Link href="/resources" onClick={close}>Resources</Link>
           <Link href="/jobs" onClick={close}>Startup Jobs</Link>
-          <Link href="/add" onClick={close}>Add your startup ($20)</Link>
+          <Link href="/add" onClick={close}>Add your startup</Link>
           <Link href="/privacy" onClick={close}>Privacy Policy</Link>
           <Link href="/terms" onClick={close}>Terms of Use</Link>
           <Link href="/contact" onClick={close}>Contact</Link>

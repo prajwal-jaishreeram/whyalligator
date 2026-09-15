@@ -18,7 +18,7 @@ export default async function HomePage() {
           <Link href="/add">pay $20</Link>.
         </p>
         <Link href="/add" className="hero-cta">
-          Add your startup ($20)
+          Add your startup
         </Link>
         <div className="hero-metrics">
           <div className="hero-metrics-badge">

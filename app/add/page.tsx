@@ -14,23 +14,16 @@ export default async function AddPage({
   const params = await searchParams;
 
   return (
-    <main>
-      <section className="hero">
-        <h1>Add your startup</h1>
-        <p className="hero-copy">
-          $20, one time, live on the directory as soon as payment clears. No
-          interview. No batch. No 7%. We accept the other 99%.
-        </p>
-        {params.canceled ? (
+    <main className="yc-add-page">
+      {params.canceled ? (
+        <div className="page-width" style={{ marginTop: 20 }}>
           <p className="form-error hero-error">
             Checkout was canceled. Your card was not listed.
           </p>
-        ) : null}
-      </section>
-      <div className="page-width form-wide">
-        <div className="form-card">
-          <AddStartupForm />
         </div>
+      ) : null}
+      <div className="yc-page-width">
+        <AddStartupForm />
       </div>
     </main>
   );

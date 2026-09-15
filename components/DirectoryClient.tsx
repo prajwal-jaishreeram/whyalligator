@@ -357,9 +357,42 @@ export function DirectoryClient({ companies }: { companies: Company[] }) {
       ) : null}
 
       <section className="results-col">
-        <div className="results-toolbar">
+        <div className="directory-header-row">
+          <div className="search-box-wrapper">
+            <svg
+              className="search-mag-icon"
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="1.7"
+                d="M19 19l-4.35-4.35m0 0A7.5 7.5 0 103.5 3.5a7.5 7.5 0 0011.15 11.15z"
+              />
+            </svg>
+            <input
+              className="search-input"
+              placeholder="Search..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+            {query ? (
+              <button
+                type="button"
+                className="search-clear-btn"
+                onClick={() => setQuery("")}
+                aria-label="Clear search"
+              >
+                ✕
+              </button>
+            ) : null}
+          </div>
+
           <label className="sort-label">
-            Sort by
+            <span className="sort-by-text">Sort by</span>
             <select
               value={sort}
               onChange={(e) => setSort(e.target.value as SortKey)}
@@ -371,46 +404,38 @@ export function DirectoryClient({ companies }: { companies: Company[] }) {
           </label>
         </div>
 
-        <div className="search-box-card">
-          <input
-            className="search-input"
-            placeholder="Search..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-          {activeFilters.length > 0 ? (
-            <div className="active-filters-row">
-              {activeFilters.map((f) => (
-                <button
-                  key={f.key}
-                  type="button"
-                  className="active-filter-pill"
-                  onClick={f.onRemove}
-                  title="Remove filter"
-                >
-                  {f.label} <span className="pill-remove">✕</span>
-                </button>
-              ))}
+        {activeFilters.length > 0 ? (
+          <div className="active-filters-row">
+            {activeFilters.map((f) => (
               <button
+                key={f.key}
                 type="button"
-                className="clear-all-filters"
-                onClick={() => {
-                  setBatches([]);
-                  setIndustries([]);
-                  setRegions([]);
-                  setHiringOnly(false);
-                  setNonprofitOnly(false);
-                  setTopCompaniesOnly(false);
-                  setMinSize(1);
-                  setMaxSize(maxTeam);
-                  setQuery("");
-                }}
+                className="active-filter-pill"
+                onClick={f.onRemove}
+                title="Remove filter"
               >
-                Clear all
+                {f.label} <span className="pill-remove">✕</span>
               </button>
-            </div>
-          ) : null}
-        </div>
+            ))}
+            <button
+              type="button"
+              className="clear-all-filters"
+              onClick={() => {
+                setBatches([]);
+                setIndustries([]);
+                setRegions([]);
+                setHiringOnly(false);
+                setNonprofitOnly(false);
+                setTopCompaniesOnly(false);
+                setMinSize(1);
+                setMaxSize(maxTeam);
+                setQuery("");
+              }}
+            >
+              Clear all
+            </button>
+          </div>
+        ) : null}
 
         <p className="showing">
           Showing {filtered.length} of {companies.length} companies
