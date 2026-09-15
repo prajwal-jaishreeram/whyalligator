@@ -417,6 +417,35 @@ select {
   margin-top: 12px;
 }
 
+.check-row-sub {
+  padding-left: 20px;
+  font-size: 13px;
+  color: #333;
+}
+
+.subcat-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0 4px 0 0;
+  cursor: pointer;
+  color: #737373;
+  font-size: 9px;
+  line-height: 1;
+}
+
+.subcat-toggle-btn:hover {
+  color: #111;
+}
+
+.check-row-main {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .size-range-display {
   margin: 6px 0 16px;
   font-size: 15px;

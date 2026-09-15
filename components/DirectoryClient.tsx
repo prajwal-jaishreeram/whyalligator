@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { Company } from "@/lib/types";
 import { companyAnchor, companyPath, teamSizeNumber } from "@/lib/companies";
+import { INDUSTRY_TAXONOMY, REGION_TAXONOMY, type TaxonomyItem } from "@/lib/options";
 import { CompanyCard } from "./CompanyCard";
 
 type SortKey = "newest" | "oldest" | "name";
@@ -70,10 +71,38 @@ export function DirectoryClient({ companies }: { companies: Company[] }) {
       if (nonprofitOnly && !c.is_nonprofit) return false;
       if (topCompaniesOnly && !c.is_top_company) return false;
       if (batches.length && !batches.includes(c.batch)) return false;
-      if (industries.length && !c.industries.some((tag) => industries.includes(tag))) {
-        return false;
+      if (industries.length) {
+        const matchesIndustry = c.industries.some((tag) => {
+          const lowerTag = tag.toLowerCase();
+          return industries.some((selectedInd) => {
+            const lowerSelected = selectedInd.toLowerCase();
+            if (lowerTag === lowerSelected) return true;
+            const parent = INDUSTRY_TAXONOMY.find(
+              (p) => p.name.toLowerCase() === lowerSelected,
+            );
+            if (parent?.subcategories?.some((sub) => sub.toLowerCase() === lowerTag)) {
+              return true;
+            }
+            return false;
+          });
+        });
+        if (!matchesIndustry) return false;
       }
-      if (regions.length && !regions.includes(c.hq_region)) return false;
+      if (regions.length) {
+        const companyLoc = `${c.hq_region} ${c.location}`.toLowerCase();
+        const matchesRegion = regions.some((selectedReg) => {
+          const lowerSelected = selectedReg.toLowerCase();
+          if (companyLoc.includes(lowerSelected)) return true;
+          const parent = REGION_TAXONOMY.find(
+            (r) => r.name.toLowerCase() === lowerSelected,
+          );
+          if (parent?.subcategories?.some((sub) => companyLoc.includes(sub.toLowerCase()))) {
+            return true;
+          }
+          return false;
+        });
+        if (!matchesRegion) return false;
+      }
       const size = teamSizeNumber(c);
       if (size < minSize || size > maxSize) return false;
       if (!q) return true;
@@ -146,28 +175,56 @@ export function DirectoryClient({ companies }: { companies: Company[] }) {
         onChange={setBatches}
         defaultOpen={false}
       />
-      <CollapsibleFilterGroup
+      <HierarchicalTaxonomyFilterGroup
         title="Industry"
         allLabel="All industries"
         allCount={companies.length}
-        options={industryOptions.map((name) => ({
-          name,
-          count: companies.filter((c) => c.industries.includes(name)).length,
-        }))}
+        taxonomy={INDUSTRY_TAXONOMY}
         selected={industries}
         onChange={setIndustries}
-        defaultOpen={false}
+        getCategoryCount={(catName) =>
+          companies.filter((c) =>
+            c.industries.some((tag) => {
+              const lowerTag = tag.toLowerCase();
+              if (lowerTag === catName.toLowerCase()) return true;
+              const subcats =
+                INDUSTRY_TAXONOMY.find(
+                  (i) => i.name.toLowerCase() === catName.toLowerCase(),
+                )?.subcategories ?? [];
+              return subcats.some((sub) => sub.toLowerCase() === lowerTag);
+            }),
+          ).length
+        }
+        getSubcategoryCount={(subName) =>
+          companies.filter((c) =>
+            c.industries.some((tag) => tag.toLowerCase() === subName.toLowerCase()),
+          ).length
+        }
+        defaultOpen={true}
       />
-      <CollapsibleFilterGroup
+      <HierarchicalTaxonomyFilterGroup
         title="HQ Region"
         allLabel="Anywhere"
         allCount={companies.length}
-        options={regionOptions.map((name) => ({
-          name,
-          count: companies.filter((c) => c.hq_region === name).length,
-        }))}
+        taxonomy={REGION_TAXONOMY}
         selected={regions}
         onChange={setRegions}
+        getCategoryCount={(catName) =>
+          companies.filter((c) => {
+            const loc = `${c.hq_region} ${c.location}`.toLowerCase();
+            if (loc.includes(catName.toLowerCase())) return true;
+            const subcats =
+              REGION_TAXONOMY.find(
+                (r) => r.name.toLowerCase() === catName.toLowerCase(),
+              )?.subcategories ?? [];
+            return subcats.some((sub) => loc.includes(sub.toLowerCase()));
+          }).length
+        }
+        getSubcategoryCount={(subName) =>
+          companies.filter((c) =>
+            `${c.hq_region} ${c.location}`.toLowerCase().includes(subName.toLowerCase()),
+          ).length
+        }
         defaultOpen={true}
       />
 
@@ -425,6 +482,120 @@ function CollapsibleFilterGroup({
               <em>{option.count}</em>
             </label>
           ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function HierarchicalTaxonomyFilterGroup({
+  title,
+  allLabel,
+  allCount,
+  taxonomy,
+  selected,
+  onChange,
+  getCategoryCount,
+  getSubcategoryCount,
+  defaultOpen = true,
+}: {
+  title: string;
+  allLabel: string;
+  allCount: number;
+  taxonomy: TaxonomyItem[];
+  selected: string[];
+  onChange: (next: string[]) => void;
+  getCategoryCount: (catName: string) => number;
+  getSubcategoryCount: (subName: string) => number;
+  defaultOpen?: boolean;
+}) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+  const [expandedParents, setExpandedParents] = useState<string[]>([]);
+  const allOn = selected.length === 0;
+
+  function toggleParentExpanded(name: string) {
+    setExpandedParents((current) =>
+      current.includes(name) ? current.filter((x) => x !== name) : [...current, name],
+    );
+  }
+
+  return (
+    <div className="filter-section">
+      <button
+        type="button"
+        className="filter-section-header-btn"
+        onClick={() => setIsOpen(!isOpen)}
+        aria-expanded={isOpen}
+      >
+        <h4 className="yc-filter-title">{title}</h4>
+        <span className="filter-toggle-icon">{isOpen ? "−" : "+"}</span>
+      </button>
+
+      {isOpen ? (
+        <div className="filter-group-content">
+          <label className="check-row">
+            <input
+              type="checkbox"
+              checked={allOn}
+              onChange={() => onChange([])}
+            />
+            <span>{allLabel}</span>
+            <em>{allCount}</em>
+          </label>
+
+          {taxonomy.map((item) => {
+            const hasSub = (item.subcategories?.length ?? 0) > 0;
+            const isExpanded = expandedParents.includes(item.name);
+            const parentChecked = selected.includes(item.name);
+            const catCount = getCategoryCount(item.name);
+
+            return (
+              <div key={item.name} className="taxonomy-item-block">
+                <div className="check-row check-row-main">
+                  {hasSub ? (
+                    <button
+                      type="button"
+                      className="subcat-toggle-btn"
+                      onClick={() => toggleParentExpanded(item.name)}
+                      aria-label={isExpanded ? `Collapse ${item.name}` : `Expand ${item.name}`}
+                    >
+                      {isExpanded ? "▼" : "▶"}
+                    </button>
+                  ) : (
+                    <span style={{ width: "12px", display: "inline-block" }} />
+                  )}
+                  <input
+                    type="checkbox"
+                    checked={parentChecked}
+                    onChange={() => onChange(toggleValue(selected, item.name))}
+                  />
+                  <span>{item.name}</span>
+                  {catCount > 0 ? <em>{catCount}</em> : null}
+                </div>
+
+                {hasSub && isExpanded ? (
+                  <div className="taxonomy-sub-list">
+                    {item.subcategories!.map((sub) => {
+                      const subChecked = selected.includes(sub);
+                      const subCount = getSubcategoryCount(sub);
+
+                      return (
+                        <label className="check-row check-row-sub" key={sub}>
+                          <input
+                            type="checkbox"
+                            checked={subChecked}
+                            onChange={() => onChange(toggleValue(selected, sub))}
+                          />
+                          <span>{sub}</span>
+                          {subCount > 0 ? <em>{subCount}</em> : null}
+                        </label>
+                      );
+                    })}
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
         </div>
       ) : null}
     </div>
