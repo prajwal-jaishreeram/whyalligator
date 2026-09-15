@@ -4,7 +4,7 @@ import type Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase";
 import { getStripe } from "@/lib/stripe";
 import { sendListingConfirmation } from "@/lib/email";
-import { siteUrl } from "@/lib/companies";
+import { getBatchName, siteUrl } from "@/lib/companies";
 import { slugify, uniqueSlug } from "@/lib/slug";
 import type { ListingPayload } from "@/lib/types";
 
@@ -86,6 +86,14 @@ export async function POST(request: Request) {
     (slugs ?? []).map((row) => String(row.slug ?? "")),
   );
 
+  const { count: currentTotal } = await supabase
+    .from("companies")
+    .select("*", { count: "exact", head: true });
+  
+  const assignedBatch = payload.batch && payload.batch !== "The Other 99%"
+    ? payload.batch
+    : getBatchName(currentTotal ?? 0);
+
   const { data, error } = await supabase
     .from("companies")
     .insert({
@@ -100,7 +108,7 @@ export async function POST(request: Request) {
       location: payload.location,
       founded_year: payload.founded_year,
       team_size: payload.team_size,
-      batch: payload.batch,
+      batch: assignedBatch,
       activity_status: payload.activity_status,
       industries: payload.industries,
       linkedin_url: payload.linkedin_url,
@@ -110,7 +118,7 @@ export async function POST(request: Request) {
       jobs: payload.jobs,
       hq_region: payload.hq_region,
       is_nonprofit: payload.is_nonprofit,
-      is_top_company: payload.is_top_company,
+      is_top_company: false,
       status: "live",
     })
     .select("id, slug")

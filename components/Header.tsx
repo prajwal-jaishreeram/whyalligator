@@ -2,7 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createBrowserClient, hasSupabaseConfig } from "@/lib/supabase";
 
 function Chevron() {
   return (
@@ -20,6 +21,35 @@ function Chevron() {
 
 export function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!hasSupabaseConfig()) return;
+    try {
+      const supabase = createBrowserClient();
+      supabase.auth.getSession().then(({ data }) => {
+        setUserEmail(data.session?.user?.email ?? null);
+      });
+
+      const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+        setUserEmail(session?.user?.email ?? null);
+      });
+
+      return () => {
+        listener.subscription.unsubscribe();
+      };
+    } catch {
+      // ignore in environments without browser auth
+    }
+  }, []);
+
+  async function handleSignOut() {
+    if (!hasSupabaseConfig()) return;
+    const supabase = createBrowserClient();
+    await supabase.auth.signOut();
+    setUserEmail(null);
+    window.location.href = "/";
+  }
 
   function close() {
     setMenuOpen(false);
@@ -79,9 +109,30 @@ export function Header() {
             </Link>
           </div>
           <div className="header-actions">
-            <Link href="/add" className="login-link">
-              Log in
-            </Link>
+            {userEmail ? (
+              <>
+                <Link href="/dashboard" className="login-link" title={userEmail}>
+                  My Startups
+                </Link>
+                <button
+                  type="button"
+                  className="login-link"
+                  style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
+                  onClick={handleSignOut}
+                >
+                  Log out
+                </button>
+              </>
+            ) : (
+              <>
+                <Link href="/login" className="login-link">
+                  Log in
+                </Link>
+                <Link href="/login?mode=signup" className="login-link">
+                  Sign up
+                </Link>
+              </>
+            )}
             <Link href="/add" className="apply-btn">
               Add yours
             </Link>
@@ -103,6 +154,27 @@ export function Header() {
 
       {menuOpen ? (
         <div className="mobile-menu">
+          {userEmail ? (
+            <>
+              <Link href="/dashboard" onClick={close}>My Startups ({userEmail})</Link>
+              <button
+                type="button"
+                className="nav-link"
+                style={{ textAlign: "left", padding: "10px 0", background: "none", border: "none", cursor: "pointer" }}
+                onClick={() => {
+                  close();
+                  handleSignOut();
+                }}
+              >
+                Log out
+              </button>
+            </>
+          ) : (
+            <>
+              <Link href="/login" onClick={close}>Log in</Link>
+              <Link href="/login?mode=signup" onClick={close}>Create account</Link>
+            </>
+          )}
           <Link href="/about" onClick={close}>About</Link>
           <Link href="/" onClick={close}>Companies</Link>
           <Link href="/library" onClick={close}>Library</Link>

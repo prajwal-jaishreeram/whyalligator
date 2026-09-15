@@ -16,6 +16,14 @@ export function createAnonClient(): SupabaseClient {
   );
 }
 
+export function createBrowserClient(): SupabaseClient {
+  return createClient(
+    required("NEXT_PUBLIC_SUPABASE_URL"),
+    required("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
+    { auth: { persistSession: true, autoRefreshToken: true } },
+  );
+}
+
 export function createAdminClient(): SupabaseClient {
   return createClient(
     required("NEXT_PUBLIC_SUPABASE_URL"),

@@ -41,6 +41,7 @@ export type Company = {
   is_top_company: boolean;
   created_at: string;
   status: "live";
+  user_id?: string | null;
 };
 
 export type ListingPayload = Omit<

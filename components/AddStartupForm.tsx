@@ -174,10 +174,6 @@ export function AddStartupForm() {
           <input name="is_nonprofit" type="checkbox" />
           This is a nonprofit
         </label>
-        <label className="form-check">
-          <input name="is_top_company" type="checkbox" />
-          This is a top company
-        </label>
       </div>
       <label>
         Primary partner

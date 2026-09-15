@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Company } from "@/lib/types";
+import { createBrowserClient, hasSupabaseConfig } from "@/lib/supabase";
 
 function Logo({
   name,
@@ -59,17 +60,48 @@ function LinkIcon() {
 
 export function CompanyProfile({ company }: { company: Company }) {
   const [tab, setTab] = useState<"company" | "jobs">("company");
+  const [canEdit, setCanEdit] = useState(false);
   const jobs = company.jobs ?? [];
+
+  useEffect(() => {
+    if (!hasSupabaseConfig()) return;
+    try {
+      const supabase = createBrowserClient();
+      supabase.auth.getSession().then(({ data }) => {
+        const user = data.session?.user;
+        if (!user) return;
+        if (
+          company.user_id === user.id ||
+          (user.email && company.email?.toLowerCase() === user.email.toLowerCase())
+        ) {
+          setCanEdit(true);
+        }
+      });
+    } catch {
+      // ignore
+    }
+  }, [company]);
 
   return (
     <div className="profile-page">
-      <nav className="crumbs">
-        <Link href="/">Home</Link>
-        <span>›</span>
-        <Link href="/">Companies</Link>
-        <span>›</span>
-        <span>{company.company_name}</span>
-      </nav>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "28px" }}>
+        <nav className="crumbs" style={{ margin: 0 }}>
+          <Link href="/">Home</Link>
+          <span>›</span>
+          <Link href="/">Companies</Link>
+          <span>›</span>
+          <span>{company.company_name}</span>
+        </nav>
+        {canEdit ? (
+          <Link
+            href={`/companies/${company.slug || company.id}/edit`}
+            className="hero-cta"
+            style={{ height: "36px", fontSize: "14px", padding: "0 18px" }}
+          >
+            Edit this startup
+          </Link>
+        ) : null}
+      </div>
 
       <div className="profile-grid">
         <div>

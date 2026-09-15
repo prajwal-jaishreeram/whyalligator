@@ -105,7 +105,15 @@ export function DirectoryClient({ companies }: { companies: Company[] }) {
   const filterPanel = (
     <aside className="filter-panel" aria-label="Filters">
       <div className="filter-section filter-section-first">
-        <h4>Highlights</h4>
+        <label className="check-row">
+          <input
+            type="checkbox"
+            checked={topCompaniesOnly}
+            onChange={(e) => setTopCompaniesOnly(e.target.checked)}
+          />
+          <span className="pill-top-icon">💎 Top Companies</span>
+          <em>{topCompanyCount}</em>
+        </label>
         <label className="check-row">
           <input
             type="checkbox"
@@ -126,31 +134,7 @@ export function DirectoryClient({ companies }: { companies: Company[] }) {
         </label>
       </div>
 
-      <div className="filter-section">
-        <h4>Top Companies</h4>
-        <label className="check-row">
-          <input
-            type="checkbox"
-            checked={topCompaniesOnly}
-            onChange={(e) => setTopCompaniesOnly(e.target.checked)}
-          />
-          <span>Show top companies</span>
-          <em>{topCompanyCount}</em>
-        </label>
-        {topCompanies.length === 0 ? (
-          <p className="filter-note">No top companies listed yet.</p>
-        ) : (
-          <ul className="top-company-list">
-            {topCompanies.map((company) => (
-              <li key={company.id}>
-                <Link href={companyPath(company)}>{company.company_name}</Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      <FilterGroup
+      <CollapsibleFilterGroup
         title="Batch"
         allLabel="All batches"
         allCount={companies.length}
@@ -160,8 +144,9 @@ export function DirectoryClient({ companies }: { companies: Company[] }) {
         }))}
         selected={batches}
         onChange={setBatches}
+        defaultOpen={false}
       />
-      <FilterGroup
+      <CollapsibleFilterGroup
         title="Industry"
         allLabel="All industries"
         allCount={companies.length}
@@ -171,8 +156,9 @@ export function DirectoryClient({ companies }: { companies: Company[] }) {
         }))}
         selected={industries}
         onChange={setIndustries}
+        defaultOpen={false}
       />
-      <FilterGroup
+      <CollapsibleFilterGroup
         title="HQ Region"
         allLabel="Anywhere"
         allCount={companies.length}
@@ -182,36 +168,105 @@ export function DirectoryClient({ companies }: { companies: Company[] }) {
         }))}
         selected={regions}
         onChange={setRegions}
+        defaultOpen={true}
       />
 
       <div className="filter-section">
-        <h4>Company Size</h4>
-        <p className="size-range">
-          {minSize} - {maxSize}+
+        <h4 className="yc-filter-title">Company Size</h4>
+        <p className="size-range-display">
+          {minSize} - {maxSize >= maxTeam ? `${maxTeam}+` : maxSize}
         </p>
-        <label className="range-label">
-          Min
+        <div className="yc-range-slider-wrap">
+          <div
+            className="yc-range-slider-highlight"
+            style={{
+              left: `${((minSize - 1) / (maxTeam - 1)) * 100}%`,
+              right: `${100 - ((maxSize - 1) / (maxTeam - 1)) * 100}%`,
+            }}
+          />
           <input
             type="range"
             min={1}
             max={maxTeam}
             value={minSize}
-            onChange={(e) => setMinSize(Math.min(Number(e.target.value), maxSize))}
+            className="yc-range-thumb thumb-min"
+            onChange={(e) => {
+              const val = Math.min(Number(e.target.value), maxSize);
+              setMinSize(val);
+            }}
           />
-        </label>
-        <label className="range-label">
-          Max
           <input
             type="range"
             min={1}
             max={maxTeam}
             value={maxSize}
-            onChange={(e) => setMaxSize(Math.max(Number(e.target.value), minSize))}
+            className="yc-range-thumb thumb-max"
+            onChange={(e) => {
+              const val = Math.max(Number(e.target.value), minSize);
+              setMaxSize(val);
+            }}
           />
-        </label>
+        </div>
       </div>
     </aside>
   );
+
+  const activeFilters = [
+    ...batches.map((b) => ({
+      key: `batch-${b}`,
+      label: b,
+      onRemove: () => setBatches(batches.filter((item) => item !== b)),
+    })),
+    ...industries.map((ind) => ({
+      key: `ind-${ind}`,
+      label: ind,
+      onRemove: () => setIndustries(industries.filter((item) => item !== ind)),
+    })),
+    ...regions.map((reg) => ({
+      key: `reg-${reg}`,
+      label: reg,
+      onRemove: () => setRegions(regions.filter((item) => item !== reg)),
+    })),
+    ...(hiringOnly
+      ? [
+          {
+            key: "hiring",
+            label: "Is Hiring",
+            onRemove: () => setHiringOnly(false),
+          },
+        ]
+      : []),
+    ...(nonprofitOnly
+      ? [
+          {
+            key: "nonprofit",
+            label: "Nonprofit",
+            onRemove: () => setNonprofitOnly(false),
+          },
+        ]
+      : []),
+    ...(topCompaniesOnly
+      ? [
+          {
+            key: "top",
+            label: "Top Companies",
+            onRemove: () => setTopCompaniesOnly(false),
+          },
+        ]
+      : []),
+    ...(minSize > 1 || maxSize < maxTeam
+      ? [
+          {
+            key: "size",
+            label: `Size: ${minSize} - ${maxSize}+`,
+            onRemove: () => {
+              setMinSize(1);
+              setMaxSize(maxTeam);
+            },
+          },
+        ]
+      : []),
+  ];
 
   return (
     <div className="directory-shell">
@@ -243,18 +298,54 @@ export function DirectoryClient({ companies }: { companies: Company[] }) {
               value={sort}
               onChange={(e) => setSort(e.target.value as SortKey)}
             >
-              <option value="newest">Newest first</option>
-              <option value="oldest">Oldest first</option>
-              <option value="name">Name</option>
+              <option value="newest">Default (Newest)</option>
+              <option value="oldest">Oldest</option>
+              <option value="name">Name (A-Z)</option>
             </select>
           </label>
         </div>
-        <input
-          className="search-input"
-          placeholder="Search..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
+
+        <div className="search-box-card">
+          <input
+            className="search-input"
+            placeholder="Search..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          {activeFilters.length > 0 ? (
+            <div className="active-filters-row">
+              {activeFilters.map((f) => (
+                <button
+                  key={f.key}
+                  type="button"
+                  className="active-filter-pill"
+                  onClick={f.onRemove}
+                  title="Remove filter"
+                >
+                  {f.label} <span className="pill-remove">✕</span>
+                </button>
+              ))}
+              <button
+                type="button"
+                className="clear-all-filters"
+                onClick={() => {
+                  setBatches([]);
+                  setIndustries([]);
+                  setRegions([]);
+                  setHiringOnly(false);
+                  setNonprofitOnly(false);
+                  setTopCompaniesOnly(false);
+                  setMinSize(1);
+                  setMaxSize(maxTeam);
+                  setQuery("");
+                }}
+              >
+                Clear all
+              </button>
+            </div>
+          ) : null}
+        </div>
+
         <p className="showing">
           Showing {filtered.length} of {companies.length} companies
         </p>
@@ -280,13 +371,14 @@ export function DirectoryClient({ companies }: { companies: Company[] }) {
   );
 }
 
-function FilterGroup({
+function CollapsibleFilterGroup({
   title,
   allLabel,
   allCount,
   options,
   selected,
   onChange,
+  defaultOpen = false,
 }: {
   title: string;
   allLabel: string;
@@ -294,31 +386,47 @@ function FilterGroup({
   options: { name: string; count: number }[];
   selected: string[];
   onChange: (next: string[]) => void;
+  defaultOpen?: boolean;
 }) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
   const allOn = selected.length === 0;
+
   return (
     <div className="filter-section">
-      <h4>{title}</h4>
-      <label className="check-row">
-        <input
-          type="checkbox"
-          checked={allOn}
-          onChange={() => onChange([])}
-        />
-        <span>{allLabel}</span>
-        <em>{allCount}</em>
-      </label>
-      {options.map((option) => (
-        <label className="check-row" key={option.name}>
-          <input
-            type="checkbox"
-            checked={selected.includes(option.name)}
-            onChange={() => onChange(toggleValue(selected, option.name))}
-          />
-          <span>{option.name}</span>
-          <em>{option.count}</em>
-        </label>
-      ))}
+      <button
+        type="button"
+        className="filter-section-header-btn"
+        onClick={() => setIsOpen(!isOpen)}
+        aria-expanded={isOpen}
+      >
+        <h4 className="yc-filter-title">{title}</h4>
+        <span className="filter-toggle-icon">{isOpen ? "−" : "+"}</span>
+      </button>
+
+      {isOpen ? (
+        <div className="filter-group-content">
+          <label className="check-row">
+            <input
+              type="checkbox"
+              checked={allOn}
+              onChange={() => onChange([])}
+            />
+            <span>{allLabel}</span>
+            <em>{allCount}</em>
+          </label>
+          {options.map((option) => (
+            <label className="check-row" key={option.name}>
+              <input
+                type="checkbox"
+                checked={selected.includes(option.name)}
+                onChange={() => onChange(toggleValue(selected, option.name))}
+              />
+              <span>{option.name}</span>
+              <em>{option.count}</em>
+            </label>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -58,6 +58,8 @@ create table if not exists public.pending_listings (
   consumed_at timestamptz
 );
 
+alter table public.companies add column if not exists user_id uuid references auth.users(id);
+
 alter table public.companies enable row level security;
 alter table public.pending_listings enable row level security;
 
@@ -66,6 +68,19 @@ create policy "Public can read live companies"
   on public.companies
   for select
   using (status = 'live');
+
+drop policy if exists "Users can read their own companies" on public.companies;
+create policy "Users can read their own companies"
+  on public.companies
+  for select
+  using (auth.uid() = user_id or lower(email) = lower(auth.jwt()->>'email'));
+
+drop policy if exists "Users can update their own companies" on public.companies;
+create policy "Users can update their own companies"
+  on public.companies
+  for update
+  using (auth.uid() = user_id or lower(email) = lower(auth.jwt()->>'email'))
+  with check (auth.uid() = user_id or lower(email) = lower(auth.jwt()->>'email'));
 
 insert into storage.buckets (id, name, public, file_size_limit)
 values ('logos', 'logos', true, 2097152)

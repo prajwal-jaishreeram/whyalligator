@@ -2,7 +2,7 @@ import { hasSupabaseConfig, createAnonClient } from "./supabase";
 import type { Company, Job } from "./types";
 
 const SELECT_FIELDS =
-  "id, slug, company_name, pitch, description, website_url, logo_url, email, location, founded_year, team_size, batch, activity_status, industries, linkedin_url, twitter_url, primary_partner, founders, jobs, hq_region, is_nonprofit, is_top_company, created_at, status";
+  "id, slug, company_name, pitch, description, website_url, logo_url, email, location, founded_year, team_size, batch, activity_status, industries, linkedin_url, twitter_url, primary_partner, founders, jobs, hq_region, is_nonprofit, is_top_company, created_at, status, user_id";
 
 function normalizeCompany(
   row: Partial<Company> & { id: string; company_name: string },
@@ -32,6 +32,7 @@ function normalizeCompany(
     is_top_company: Boolean(row.is_top_company),
     created_at: row.created_at || new Date().toISOString(),
     status: "live",
+    user_id: row.user_id ?? null,
   };
 }
 
@@ -119,3 +120,9 @@ export function teamSizeNumber(company: Pick<Company, "team_size">): number {
   const n = parseInt(String(company.team_size), 10);
   return Number.isFinite(n) && n > 0 ? n : 1;
 }
+
+export function getBatchName(companyIndex: number): string {
+  const batchNum = Math.floor(companyIndex / 3000) + 1;
+  return `Batch ${batchNum}`;
+}
+

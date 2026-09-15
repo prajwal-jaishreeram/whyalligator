@@ -60,11 +60,6 @@ export function Footer() {
               <li>
                 <Link href="/terms">Terms of Use</Link>
               </li>
-              <li>
-                <a href="https://x.com/Prajwal_shindee" target="_blank" rel="noreferrer">
-                  X / Twitter
-                </a>
-              </li>
             </ul>
           </div>
         </div>
