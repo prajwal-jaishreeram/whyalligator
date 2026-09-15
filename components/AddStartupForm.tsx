@@ -21,9 +21,10 @@ type JobDraft = {
 };
 
 const STEPS = [
-  { id: "company", label: "Company" },
   { id: "founders", label: "Founders" },
-  { id: "jobs", label: "Jobs" },
+  { id: "video", label: "Founder Video" },
+  { id: "company", label: "Company" },
+  { id: "progress", label: "Progress & Jobs" },
   { id: "submit", label: "Review & Submit" },
 ] as const;
 
@@ -48,16 +49,27 @@ const emptyJob = (): JobDraft => ({
 
 export function AddStartupForm() {
   const formRef = useRef<HTMLFormElement>(null);
-  const [currentStep, setCurrentStep] = useState<StepId>("company");
+  const [currentStep, setCurrentStep] = useState<StepId>("founders");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
-  // Form fields state
+  // Founders state
+  const [founders, setFounders] = useState<FounderDraft[]>([emptyFounder()]);
+  const [expandedFounder, setExpandedFounder] = useState<number | null>(0);
+  const [techWorkNotes, setTechWorkNotes] = useState("");
+  const [lookingForCofounder, setLookingForCofounder] = useState("");
+
+  // Video state
+  const [videoUrl, setVideoUrl] = useState("");
+  const [videoFileName, setVideoFileName] = useState("");
+
+  // Company state
   const [companyName, setCompanyName] = useState("");
   const [pitch, setPitch] = useState("");
   const [description, setDescription] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [location, setLocation] = useState("");
+  const [locationDecision, setLocationDecision] = useState("");
   const [foundedYear, setFoundedYear] = useState("");
   const [teamSize, setTeamSize] = useState("");
   const [hqRegion, setHqRegion] = useState("Remote");
@@ -68,23 +80,29 @@ export function AddStartupForm() {
   const [twitterUrl, setTwitterUrl] = useState("");
   const [isNonprofit, setIsNonprofit] = useState(false);
   const [primaryPartner, setPrimaryPartner] = useState("");
-  const [email, setEmail] = useState("");
 
-  const [founders, setFounders] = useState<FounderDraft[]>([emptyFounder()]);
-  const [expandedFounder, setExpandedFounder] = useState<number | null>(0);
-  const [techWorkNotes, setTechWorkNotes] = useState("");
-  const [lookingForCofounder, setLookingForCofounder] = useState("No");
-
+  // Progress state
+  const [productUrl, setProductUrl] = useState("");
+  const [loginCredentials, setLoginCredentials] = useState("");
   const [jobs, setJobs] = useState<JobDraft[]>([]);
+
+  // Checkout / Submit state
+  const [email, setEmail] = useState("");
   const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   const stepIndex = STEPS.findIndex((s) => s.id === currentStep);
 
   function validateStep(step: StepId): boolean {
     setError(null);
-    if (step === "company") {
+    if (step === "founders") {
+      const first = founders[0];
+      if (!first || !first.name.trim()) {
+        setError("Please add at least one founder name.");
+        return false;
+      }
+    } else if (step === "company") {
       if (!companyName.trim()) {
-        setError("Please enter a company name.");
+        setError("Please enter your company name.");
         return false;
       }
       if (!pitch.trim() || pitch.length < 4) {
@@ -92,21 +110,11 @@ export function AddStartupForm() {
         return false;
       }
       if (!description.trim() || description.length < 20) {
-        setError("Please enter an about description (at least 20 characters).");
-        return false;
-      }
-      if (!websiteUrl.trim()) {
-        setError("Please enter your website URL.");
+        setError("Please describe what your company is going to make (at least 20 characters).");
         return false;
       }
       if (!location.trim()) {
-        setError("Please enter your company location.");
-        return false;
-      }
-    } else if (step === "founders") {
-      const firstFounder = founders[0];
-      if (!firstFounder || !firstFounder.name.trim()) {
-        setError("Please provide at least one founder's name.");
+        setError("Please specify your company location.");
         return false;
       }
     }
@@ -129,6 +137,8 @@ export function AddStartupForm() {
   function handleBack() {
     if (stepIndex > 0) {
       goToStep(STEPS[stepIndex - 1].id);
+    } else {
+      window.location.href = "/";
     }
   }
 
@@ -146,10 +156,21 @@ export function AddStartupForm() {
       return;
     }
 
+    if (!companyName.trim()) {
+      setError("Please provide a company name in the Company step.");
+      goToStep("company");
+      return;
+    }
+
     setPending(true);
     const data = new FormData(event.currentTarget);
     data.set("founder_count", String(founders.length));
     data.set("job_count", String(jobs.length));
+
+    // Ensure website_url defaults to productUrl if websiteUrl is empty
+    if (!data.get("website_url") && productUrl) {
+      data.set("website_url", productUrl);
+    }
 
     try {
       const response = await fetch("/api/checkout", {
@@ -172,10 +193,22 @@ export function AddStartupForm() {
 
   return (
     <form ref={formRef} className="yc-app-shell" onSubmit={onSubmit}>
-      {/* App Header Bar for Mobile */}
+      {/* Top Header Row with always-visible Back link */}
+      <div className="yc-top-bar">
+        <button
+          type="button"
+          className="yc-top-back-btn"
+          onClick={handleBack}
+          aria-label="Back"
+        >
+          ‹ Back
+        </button>
+      </div>
+
+      {/* App Header for Mobile / Tablet */}
       <div className="yc-mobile-header">
         <div className="yc-mobile-meta">
-          <span className="yc-tagline-sub">WhyAlligator Application</span>
+          <span className="yc-tagline-sub">YC Application</span>
           <span className="yc-batch-tag">Winter 2026</span>
         </div>
         <div className="yc-steps-scroller">
@@ -194,13 +227,13 @@ export function AddStartupForm() {
       </div>
 
       <div className="yc-app-body">
-        {/* Left Vertical Stepper (Desktop) */}
+        {/* Left Vertical Navigation (Desktop) */}
         <aside className="yc-app-sidebar">
           <div className="yc-sidebar-brand">
             <h3 className="yc-sidebar-title">YC Application</h3>
             <span className="yc-sidebar-vintage">Winter 2026</span>
           </div>
-          <nav className="yc-sidebar-nav" aria-label="Form Steps">
+          <nav className="yc-sidebar-nav" aria-label="Application Steps">
             {STEPS.map((s) => (
               <button
                 key={s.id}
@@ -214,207 +247,13 @@ export function AddStartupForm() {
           </nav>
         </aside>
 
-        {/* Main Step Content */}
+        {/* Main Application Content Area */}
         <main className="yc-app-main">
           {error ? <div className="yc-error-banner">{error}</div> : null}
 
-          {/* STEP 1: COMPANY */}
-          <div className={`yc-step-section ${currentStep === "company" ? "is-visible" : "is-hidden"}`}>
-            <h2 className="yc-section-heading">Company</h2>
-            <div className="yc-field-group">
-              <label>
-                Company name <span className="req">*</span>
-                <input
-                  name="company_name"
-                  value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
-                  maxLength={80}
-                  placeholder="Acme Corp"
-                  autoComplete="organization"
-                />
-              </label>
-
-              <label>
-                One-line pitch <span className="req">*</span>
-                <input
-                  name="pitch"
-                  maxLength={140}
-                  value={pitch}
-                  onChange={(e) => setPitch(e.target.value)}
-                  placeholder="Talk to your computer without talking"
-                />
-                <span className="char-count">{pitch.length}/140</span>
-              </label>
-
-              <label>
-                About the company <span className="req">*</span>
-                <textarea
-                  name="description"
-                  minLength={20}
-                  maxLength={2000}
-                  rows={5}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="What you are building, who it is for, and why it exists."
-                />
-                <span className="char-count">{description.length}/2000</span>
-              </label>
-
-              <div className="yc-grid-2">
-                <label>
-                  Website URL <span className="req">*</span>
-                  <input
-                    name="website_url"
-                    value={websiteUrl}
-                    onChange={(e) => setWebsiteUrl(e.target.value)}
-                    placeholder="https://example.com"
-                    inputMode="url"
-                  />
-                </label>
-                <label>
-                  Location <span className="req">*</span>
-                  <input
-                    name="location"
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    placeholder="San Francisco, CA, USA"
-                  />
-                </label>
-              </div>
-
-              <div className="yc-grid-2">
-                <label>
-                  Founded
-                  <input
-                    name="founded_year"
-                    value={foundedYear}
-                    onChange={(e) => setFoundedYear(e.target.value)}
-                    placeholder="2026"
-                  />
-                </label>
-                <label>
-                  Team size
-                  <input
-                    name="team_size"
-                    type="number"
-                    min="1"
-                    max="10000"
-                    value={teamSize}
-                    onChange={(e) => setTeamSize(e.target.value)}
-                    placeholder="3"
-                  />
-                </label>
-              </div>
-
-              <div className="yc-grid-2">
-                <label>
-                  HQ region
-                  <select
-                    name="hq_region"
-                    value={hqRegion}
-                    onChange={(e) => setHqRegion(e.target.value)}
-                  >
-                    <option>Americas / Canada</option>
-                    <option>Europe</option>
-                    <option>South Asia</option>
-                    <option>Southeast Asia</option>
-                    <option>East Asia</option>
-                    <option>Middle East and North Africa</option>
-                    <option>Latin America</option>
-                    <option>Africa</option>
-                    <option>Oceania</option>
-                    <option>Remote</option>
-                  </select>
-                </label>
-                <label>
-                  Batch / vintage
-                  <input
-                    name="batch"
-                    value={batch}
-                    onChange={(e) => setBatch(e.target.value)}
-                    placeholder="Batch 1 (auto-calculated if blank)"
-                  />
-                </label>
-              </div>
-
-              <div className="yc-grid-2">
-                <label>
-                  Status
-                  <select
-                    name="activity_status"
-                    value={activityStatus}
-                    onChange={(e) => setActivityStatus(e.target.value)}
-                  >
-                    <option>Active</option>
-                    <option>Stealth</option>
-                    <option>Public</option>
-                    <option>Acquired</option>
-                  </select>
-                </label>
-                <label>
-                  Primary partner
-                  <input
-                    name="primary_partner"
-                    value={primaryPartner}
-                    onChange={(e) => setPrimaryPartner(e.target.value)}
-                    placeholder="Leave blank and we will put You"
-                  />
-                </label>
-              </div>
-
-              <label>
-                Industries
-                <input
-                  name="industries"
-                  value={industries}
-                  onChange={(e) => setIndustries(e.target.value)}
-                  placeholder="AI, B2B, SaaS, Fintech"
-                />
-                <span className="char-count">Comma-separated, matching directory filters</span>
-              </label>
-
-              <label>
-                Company logo <span className="req">*</span>
-                <input name="logo" type="file" accept="image/*" />
-                <span className="char-count">PNG, JPG, SVG, or WEBP (square works best)</span>
-              </label>
-
-              <div className="yc-grid-2">
-                <label>
-                  Company LinkedIn
-                  <input
-                    name="linkedin_url"
-                    value={linkedinUrl}
-                    onChange={(e) => setLinkedinUrl(e.target.value)}
-                    placeholder="https://linkedin.com/company/..."
-                  />
-                </label>
-                <label>
-                  Company X / Twitter
-                  <input
-                    name="twitter_url"
-                    value={twitterUrl}
-                    onChange={(e) => setTwitterUrl(e.target.value)}
-                    placeholder="https://x.com/..."
-                  />
-                </label>
-              </div>
-
-              <label className="yc-checkbox-card">
-                <input
-                  name="is_nonprofit"
-                  type="checkbox"
-                  checked={isNonprofit}
-                  onChange={(e) => setIsNonprofit(e.target.checked)}
-                />
-                <span>This startup is a registered nonprofit (501(c)(3) or equivalent)</span>
-              </label>
-            </div>
-          </div>
-
-          {/* STEP 2: FOUNDERS */}
-          <div className={`yc-step-section ${currentStep === "founders" ? "is-visible" : "is-hidden"}`}>
-            <h2 className="yc-section-heading">Founders</h2>
+          {/* STEP 1: FOUNDERS */}
+          <div className={`yc-step-content ${currentStep === "founders" ? "is-visible" : "is-hidden"}`}>
+            <h2 className="yc-section-title">Founders</h2>
 
             <div className="yc-founders-list">
               {founders.map((founder, index) => {
@@ -454,7 +293,7 @@ export function AddStartupForm() {
                         {founders.length > 1 ? (
                           <button
                             type="button"
-                            className="yc-remove-founder-btn"
+                            className="yc-remove-btn"
                             onClick={(e) => {
                               e.stopPropagation();
                               setFounders(founders.filter((_, i) => i !== index));
@@ -470,8 +309,8 @@ export function AddStartupForm() {
 
                     {isExpanded ? (
                       <div className="yc-founder-body">
-                        <label>
-                          Founder Name <span className="req">*</span>
+                        <label className="yc-field-label">
+                          <span>Founder Name <strong className="req">*</strong></span>
                           <input
                             name={`founder_name_${index}`}
                             value={founder.name}
@@ -481,8 +320,9 @@ export function AddStartupForm() {
                             placeholder="Full name"
                           />
                         </label>
-                        <label>
-                          Title / Role
+
+                        <label className="yc-field-label">
+                          <span>Title / Role</span>
                           <input
                             name={`founder_title_${index}`}
                             placeholder="Founder / CEO"
@@ -492,8 +332,9 @@ export function AddStartupForm() {
                             }
                           />
                         </label>
-                        <label>
-                          Bio & Background
+
+                        <label className="yc-field-label">
+                          <span>Bio & Background</span>
                           <textarea
                             name={`founder_bio_${index}`}
                             rows={3}
@@ -504,13 +345,15 @@ export function AddStartupForm() {
                             }
                           />
                         </label>
-                        <label>
-                          Founder Photo
+
+                        <label className="yc-field-label">
+                          <span>Founder Photo</span>
                           <input name={`founder_photo_${index}`} type="file" accept="image/*" />
                         </label>
+
                         <div className="yc-grid-2">
-                          <label>
-                            X / Twitter
+                          <label className="yc-field-label">
+                            <span>X / Twitter</span>
                             <input
                               name={`founder_twitter_${index}`}
                               placeholder="https://x.com/username"
@@ -520,8 +363,8 @@ export function AddStartupForm() {
                               }
                             />
                           </label>
-                          <label>
-                            LinkedIn
+                          <label className="yc-field-label">
+                            <span>LinkedIn</span>
                             <input
                               name={`founder_linkedin_${index}`}
                               placeholder="https://linkedin.com/in/username"
@@ -541,7 +384,7 @@ export function AddStartupForm() {
               {founders.length < 4 ? (
                 <button
                   type="button"
-                  className="yc-add-founder-btn"
+                  className="yc-add-btn"
                   onClick={() => {
                     const next = [...founders, emptyFounder()];
                     setFounders(next);
@@ -553,144 +396,413 @@ export function AddStartupForm() {
               ) : null}
             </div>
 
-            <div className="yc-question-group">
-              <label>
-                Who writes code, or does other technical work on your product? Was any of it done by a non-founder? Please explain.
+            <div className="yc-form-block">
+              <label className="yc-field-label">
+                <span>Who writes code, or does other technical work on your product? Was any of it done by a non-founder? Please explain.</span>
                 <textarea
                   rows={4}
                   value={techWorkNotes}
                   onChange={(e) => setTechWorkNotes(e.target.value)}
-                  placeholder="We write 100% of our code in-house..."
                 />
               </label>
 
-              <label>
-                Are you looking for a cofounder?
-                <select
+              <label className="yc-field-label">
+                <span>Are you looking for a cofounder?</span>
+                <textarea
+                  rows={3}
                   value={lookingForCofounder}
                   onChange={(e) => setLookingForCofounder(e.target.value)}
-                >
-                  <option value="No">No</option>
-                  <option value="Yes">Yes</option>
-                  <option value="Maybe">Maybe</option>
-                </select>
+                />
               </label>
             </div>
           </div>
 
-          {/* STEP 3: JOBS (OPTIONAL) */}
-          <div className={`yc-step-section ${currentStep === "jobs" ? "is-visible" : "is-hidden"}`}>
-            <h2 className="yc-section-heading">Jobs (Optional)</h2>
-            <p className="yc-section-desc">
-              List any open roles at your company. They will appear on both your company page and the WhyAlligator Jobs board.
+          {/* STEP 2: FOUNDER VIDEO */}
+          <div className={`yc-step-content ${currentStep === "video" ? "is-visible" : "is-hidden"}`}>
+            <h2 className="yc-section-title">Founder Video</h2>
+            <p className="yc-section-subtitle">
+              Please record a one minute video introducing the founder(s).<strong className="req">*</strong>
+              <br />
+              Make sure the file does not exceed 100 MB or paste a YouTube / Loom / public link below.
             </p>
 
-            <div className="yc-jobs-list">
-              {jobs.map((job, index) => (
-                <div className="yc-job-card" key={index}>
-                  <div className="yc-job-card-header">
-                    <strong>Job {index + 1}: {job.title || "Untitled Role"}</strong>
-                    <button
-                      type="button"
-                      className="yc-remove-job-btn"
-                      onClick={() => setJobs(jobs.filter((_, i) => i !== index))}
-                    >
-                      ✕ Remove
-                    </button>
-                  </div>
-                  <label>
-                    Job Title <span className="req">*</span>
-                    <input
-                      name={`job_title_${index}`}
-                      value={job.title}
-                      placeholder="Founding Full-Stack Engineer"
-                      onChange={(e) => setJobs(updateAt(jobs, index, { title: e.target.value }))}
-                    />
-                  </label>
-                  <div className="yc-grid-2">
-                    <label>
-                      Location
-                      <input
-                        name={`job_location_${index}`}
-                        placeholder="San Francisco, CA or Remote"
-                        value={job.location}
-                        onChange={(e) => setJobs(updateAt(jobs, index, { location: e.target.value }))}
-                      />
-                    </label>
-                    <label>
-                      Salary
-                      <input
-                        name={`job_salary_${index}`}
-                        placeholder="$150K - $200K"
-                        value={job.salary}
-                        onChange={(e) => setJobs(updateAt(jobs, index, { salary: e.target.value }))}
-                      />
-                    </label>
-                  </div>
-                  <div className="yc-grid-2">
-                    <label>
-                      Equity
-                      <input
-                        name={`job_equity_${index}`}
-                        placeholder="0.5% - 2.0%"
-                        value={job.equity}
-                        onChange={(e) => setJobs(updateAt(jobs, index, { equity: e.target.value }))}
-                      />
-                    </label>
-                    <label>
-                      Experience
-                      <input
-                        name={`job_experience_${index}`}
-                        placeholder="3+ years"
-                        value={job.experience}
-                        onChange={(e) => setJobs(updateAt(jobs, index, { experience: e.target.value }))}
-                      />
-                    </label>
-                  </div>
-                  <label>
-                    Application URL
-                    <input
-                      name={`job_apply_url_${index}`}
-                      placeholder="https://example.com/careers or mailto:founders@example.com"
-                      value={job.apply_url}
-                      onChange={(e) => setJobs(updateAt(jobs, index, { apply_url: e.target.value }))}
-                    />
-                  </label>
-                </div>
-              ))}
-
-              {jobs.length < 6 ? (
-                <button
-                  type="button"
-                  className="yc-add-founder-btn"
-                  onClick={() => setJobs([...jobs, emptyJob()])}
+            <div className="yc-video-box">
+              <label className="yc-video-dropzone">
+                <input
+                  type="file"
+                  accept="video/*"
+                  style={{ display: "none" }}
+                  onChange={(e) => {
+                    if (e.target.files?.[0]) {
+                      setVideoFileName(e.target.files[0].name);
+                    }
+                  }}
+                />
+                <svg
+                  className="yc-upload-arrow"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#8e8e86"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  width="40"
+                  height="40"
                 >
-                  + Add a job role
-                </button>
-              ) : null}
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <polyline points="19 12 12 19 5 12" />
+                </svg>
+                <span className="yc-drop-text">
+                  {videoFileName ? (
+                    <strong style={{ color: "#15803d" }}>✓ {videoFileName}</strong>
+                  ) : (
+                    <>Drop here or <span className="yc-browse-link">browse</span></>
+                  )}
+                </span>
+              </label>
+
+              <div className="yc-video-or">or paste a link:</div>
+
+              <label className="yc-field-label">
+                <span>Video Link (YouTube, Loom, Vimeo, etc.)</span>
+                <input
+                  value={videoUrl}
+                  onChange={(e) => setVideoUrl(e.target.value)}
+                  placeholder="https://youtu.be/... or https://loom.com/..."
+                />
+              </label>
             </div>
           </div>
 
-          {/* STEP 4: REVIEW & SUBMIT */}
-          <div className={`yc-step-section ${currentStep === "submit" ? "is-visible" : "is-hidden"}`}>
-            <h2 className="yc-section-heading">Review & Submit</h2>
-            <p className="yc-section-desc">
-              Your company listing will go live immediately once payment of $20 clears.
+          {/* STEP 3: COMPANY */}
+          <div className={`yc-step-content ${currentStep === "company" ? "is-visible" : "is-hidden"}`}>
+            <h2 className="yc-section-title">Company</h2>
+
+            <div className="yc-form-block">
+              <label className="yc-field-label">
+                <span>Company name <strong className="req">*</strong></span>
+                <input
+                  name="company_name"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  maxLength={80}
+                  placeholder="Acme Corp"
+                  autoComplete="organization"
+                />
+              </label>
+
+              <label className="yc-field-label">
+                <span>One-line pitch <strong className="req">*</strong></span>
+                <input
+                  name="pitch"
+                  maxLength={140}
+                  value={pitch}
+                  onChange={(e) => setPitch(e.target.value)}
+                  placeholder="Talk to your computer without talking"
+                />
+                <span className="char-count">{pitch.length}/140</span>
+              </label>
+
+              <label className="yc-field-label">
+                <span>What is your company going to make? Please describe your product and what it does or will do. <strong className="req">*</strong></span>
+                <textarea
+                  name="description"
+                  minLength={20}
+                  maxLength={2000}
+                  rows={5}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="What you are building, who it is for, and why it exists."
+                />
+                <span className="char-count">{description.length}/2000</span>
+              </label>
+
+              <label className="yc-field-label">
+                <span>Where do you live now, and where would the company be based after YC? <strong className="req">*</strong></span>
+                <span className="yc-input-hint">Use the format City A, Country A / City B, Country B</span>
+                <input
+                  name="location"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder="San Francisco, CA, USA"
+                />
+              </label>
+
+              <label className="yc-field-label">
+                <span>Explain your decision regarding location.</span>
+                <textarea
+                  rows={3}
+                  value={locationDecision}
+                  onChange={(e) => setLocationDecision(e.target.value)}
+                  placeholder="We are based here because..."
+                />
+              </label>
+
+              <div className="yc-grid-2">
+                <label className="yc-field-label">
+                  <span>Website URL <strong className="req">*</strong></span>
+                  <input
+                    name="website_url"
+                    value={websiteUrl}
+                    onChange={(e) => setWebsiteUrl(e.target.value)}
+                    placeholder="https://example.com"
+                    inputMode="url"
+                  />
+                </label>
+                <label className="yc-field-label">
+                  <span>Founded</span>
+                  <input
+                    name="founded_year"
+                    value={foundedYear}
+                    onChange={(e) => setFoundedYear(e.target.value)}
+                    placeholder="2026"
+                  />
+                </label>
+              </div>
+
+              <div className="yc-grid-2">
+                <label className="yc-field-label">
+                  <span>Team size</span>
+                  <input
+                    name="team_size"
+                    type="number"
+                    min="1"
+                    max="10000"
+                    value={teamSize}
+                    onChange={(e) => setTeamSize(e.target.value)}
+                    placeholder="3"
+                  />
+                </label>
+                <label className="yc-field-label">
+                  <span>HQ region</span>
+                  <select
+                    name="hq_region"
+                    value={hqRegion}
+                    onChange={(e) => setHqRegion(e.target.value)}
+                  >
+                    <option>Americas / Canada</option>
+                    <option>Europe</option>
+                    <option>South Asia</option>
+                    <option>Southeast Asia</option>
+                    <option>East Asia</option>
+                    <option>Middle East and North Africa</option>
+                    <option>Latin America</option>
+                    <option>Africa</option>
+                    <option>Oceania</option>
+                    <option>Remote</option>
+                  </select>
+                </label>
+              </div>
+
+              <div className="yc-grid-2">
+                <label className="yc-field-label">
+                  <span>Batch / vintage</span>
+                  <input
+                    name="batch"
+                    value={batch}
+                    onChange={(e) => setBatch(e.target.value)}
+                    placeholder="Batch 1 (auto-calculated if blank)"
+                  />
+                </label>
+                <label className="yc-field-label">
+                  <span>Status</span>
+                  <select
+                    name="activity_status"
+                    value={activityStatus}
+                    onChange={(e) => setActivityStatus(e.target.value)}
+                  >
+                    <option>Active</option>
+                    <option>Stealth</option>
+                    <option>Public</option>
+                    <option>Acquired</option>
+                  </select>
+                </label>
+              </div>
+
+              <label className="yc-field-label">
+                <span>Industries</span>
+                <input
+                  name="industries"
+                  value={industries}
+                  onChange={(e) => setIndustries(e.target.value)}
+                  placeholder="AI, B2B, SaaS, Fintech"
+                />
+                <span className="char-count">Comma-separated, matching directory filter taxonomy</span>
+              </label>
+
+              <label className="yc-field-label">
+                <span>Company logo <strong className="req">*</strong></span>
+                <input name="logo" type="file" accept="image/*" />
+              </label>
+
+              <div className="yc-grid-2">
+                <label className="yc-field-label">
+                  <span>Company LinkedIn</span>
+                  <input
+                    name="linkedin_url"
+                    value={linkedinUrl}
+                    onChange={(e) => setLinkedinUrl(e.target.value)}
+                    placeholder="https://linkedin.com/company/..."
+                  />
+                </label>
+                <label className="yc-field-label">
+                  <span>Company X / Twitter</span>
+                  <input
+                    name="twitter_url"
+                    value={twitterUrl}
+                    onChange={(e) => setTwitterUrl(e.target.value)}
+                    placeholder="https://x.com/..."
+                  />
+                </label>
+              </div>
+
+              <label className="yc-checkbox-row">
+                <input
+                  name="is_nonprofit"
+                  type="checkbox"
+                  checked={isNonprofit}
+                  onChange={(e) => setIsNonprofit(e.target.checked)}
+                />
+                <span>This startup is a registered nonprofit (501(c)(3) or equivalent)</span>
+              </label>
+            </div>
+          </div>
+
+          {/* STEP 4: PROGRESS & JOBS */}
+          <div className={`yc-step-content ${currentStep === "progress" ? "is-visible" : "is-hidden"}`}>
+            <h2 className="yc-section-title">Progress & Product</h2>
+
+            <div className="yc-form-block">
+              <label className="yc-field-label">
+                <span>Please provide a link to the product, if any.</span>
+                <input
+                  value={productUrl}
+                  onChange={(e) => setProductUrl(e.target.value)}
+                  placeholder="https://"
+                />
+              </label>
+
+              <label className="yc-field-label">
+                <span>If login credentials are required for the link above, enter them here.</span>
+                <input
+                  value={loginCredentials}
+                  onChange={(e) => setLoginCredentials(e.target.value)}
+                  placeholder="username / password"
+                />
+              </label>
+
+              <h3 className="yc-subsection-title">Hiring & Open Roles (Optional)</h3>
+              <p className="yc-section-subtitle">
+                Open roles will appear on your profile card and the WhyAlligator Jobs Board.
+              </p>
+
+              <div className="yc-jobs-list">
+                {jobs.map((job, index) => (
+                  <div className="yc-job-card" key={index}>
+                    <div className="yc-job-header">
+                      <strong>Role {index + 1}: {job.title || "Untitled"}</strong>
+                      <button
+                        type="button"
+                        className="yc-remove-btn"
+                        onClick={() => setJobs(jobs.filter((_, i) => i !== index))}
+                      >
+                        ✕ Remove
+                      </button>
+                    </div>
+                    <label className="yc-field-label">
+                      <span>Job Title</span>
+                      <input
+                        name={`job_title_${index}`}
+                        value={job.title}
+                        placeholder="Founding Full-Stack Engineer"
+                        onChange={(e) => setJobs(updateAt(jobs, index, { title: e.target.value }))}
+                      />
+                    </label>
+                    <div className="yc-grid-2">
+                      <label className="yc-field-label">
+                        <span>Location</span>
+                        <input
+                          name={`job_location_${index}`}
+                          placeholder="San Francisco or Remote"
+                          value={job.location}
+                          onChange={(e) => setJobs(updateAt(jobs, index, { location: e.target.value }))}
+                        />
+                      </label>
+                      <label className="yc-field-label">
+                        <span>Salary</span>
+                        <input
+                          name={`job_salary_${index}`}
+                          placeholder="$150K - $200K"
+                          value={job.salary}
+                          onChange={(e) => setJobs(updateAt(jobs, index, { salary: e.target.value }))}
+                        />
+                      </label>
+                    </div>
+                    <div className="yc-grid-2">
+                      <label className="yc-field-label">
+                        <span>Equity</span>
+                        <input
+                          name={`job_equity_${index}`}
+                          placeholder="0.5% - 2.0%"
+                          value={job.equity}
+                          onChange={(e) => setJobs(updateAt(jobs, index, { equity: e.target.value }))}
+                        />
+                      </label>
+                      <label className="yc-field-label">
+                        <span>Experience</span>
+                        <input
+                          name={`job_experience_${index}`}
+                          placeholder="3+ years"
+                          value={job.experience}
+                          onChange={(e) => setJobs(updateAt(jobs, index, { experience: e.target.value }))}
+                        />
+                      </label>
+                    </div>
+                    <label className="yc-field-label">
+                      <span>Apply URL</span>
+                      <input
+                        name={`job_apply_url_${index}`}
+                        placeholder="https://example.com/careers"
+                        value={job.apply_url}
+                        onChange={(e) => setJobs(updateAt(jobs, index, { apply_url: e.target.value }))}
+                      />
+                    </label>
+                  </div>
+                ))}
+
+                {jobs.length < 6 ? (
+                  <button
+                    type="button"
+                    className="yc-add-btn"
+                    onClick={() => setJobs([...jobs, emptyJob()])}
+                  >
+                    + Add a job role
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          </div>
+
+          {/* STEP 5: REVIEW & SUBMIT */}
+          <div className={`yc-step-content ${currentStep === "submit" ? "is-visible" : "is-hidden"}`}>
+            <h2 className="yc-section-title">Review & Submit</h2>
+            <p className="yc-section-subtitle">
+              Your company listing will go live immediately on WhyAlligator once payment of $20 clears.
             </p>
 
-            <div className="yc-review-card">
+            <div className="yc-review-box">
               <h3 className="yc-review-title">Application Summary</h3>
               <div className="yc-review-row">
                 <span className="yc-review-label">Company:</span>
-                <strong>{companyName || "Not provided"}</strong>
+                <strong>{companyName || "Not provided (please fill in Company step)"}</strong>
               </div>
               <div className="yc-review-row">
                 <span className="yc-review-label">Pitch:</span>
                 <span>{pitch || "Not provided"}</span>
               </div>
               <div className="yc-review-row">
-                <span className="yc-review-label">Website:</span>
-                <span>{websiteUrl || "Not provided"}</span>
+                <span className="yc-review-label">Location:</span>
+                <span>{location || "Not provided"}</span>
               </div>
               <div className="yc-review-row">
                 <span className="yc-review-label">Founders:</span>
@@ -698,15 +810,15 @@ export function AddStartupForm() {
               </div>
               {jobs.length > 0 ? (
                 <div className="yc-review-row">
-                  <span className="yc-review-label">Jobs Listed:</span>
-                  <span>{jobs.length} open position{jobs.length > 1 ? "s" : ""}</span>
+                  <span className="yc-review-label">Jobs:</span>
+                  <span>{jobs.length} listed</span>
                 </div>
               ) : null}
             </div>
 
-            <div className="yc-checkout-fields">
-              <label>
-                Founder Email (for listing management & receipt) <span className="req">*</span>
+            <div className="yc-form-block" style={{ marginTop: 24 }}>
+              <label className="yc-field-label">
+                <span>Founder Email (for listing management & receipt) <strong className="req">*</strong></span>
                 <input
                   name="email"
                   type="email"
@@ -716,14 +828,14 @@ export function AddStartupForm() {
                   placeholder="founder@example.com"
                   autoComplete="email"
                 />
-                <span className="char-count">
-                  Use this email to sign in and edit your startup listing anytime.
+                <span className="yc-input-hint">
+                  You can use this email to log in and edit your startup listing anytime.
                 </span>
               </label>
 
-              {/* Mandatory Terms & Conditions Checkbox */}
+              {/* Required Terms & Conditions Checkbox */}
               <div className="yc-terms-box">
-                <label className="yc-terms-checkbox">
+                <label className="yc-terms-label">
                   <input
                     type="checkbox"
                     checked={agreedToTerms}
@@ -745,70 +857,53 @@ export function AddStartupForm() {
               </div>
 
               <p className="yc-fineprint">
-                Flat $20, one time. Your startup goes live in the directory as soon as Stripe clears. Newest first, no ranking.
+                Flat $20, one time. No recurring charges. Your startup page goes live as soon as Stripe clears. Newest first, no ranking.
               </p>
             </div>
           </div>
         </main>
       </div>
 
-      {/* STICKY BOTTOM ACTION BAR */}
+      {/* STICKY BOTTOM ACTION BAR (Matching YC screenshot exactly) */}
       <footer className="yc-sticky-bottom-bar">
         <div className="yc-bottom-bar-inner">
           <div className="yc-bottom-left">
-            {stepIndex > 0 ? (
-              <button
-                type="button"
-                className="yc-back-btn"
-                onClick={handleBack}
-              >
-                ‹ Back
-              </button>
-            ) : (
-              <span />
-            )}
+            <button
+              type="button"
+              className="yc-back-btn"
+              onClick={handleBack}
+            >
+              ‹ Back
+            </button>
           </div>
 
           <div className="yc-bottom-right">
+            <button
+              type="button"
+              className="yc-save-btn"
+              onClick={() => {
+                alert("Draft saved locally.");
+              }}
+            >
+              Save changes
+            </button>
+
             {currentStep !== "submit" ? (
-              <>
-                <button
-                  type="button"
-                  className="yc-save-btn"
-                  onClick={() => {
-                    setError(null);
-                    alert("Draft saved locally.");
-                  }}
-                >
-                  Save changes
-                </button>
-                <button
-                  type="button"
-                  className="yc-next-btn"
-                  onClick={handleNext}
-                >
-                  Next step ›
-                </button>
-              </>
+              <button
+                type="button"
+                className="yc-next-btn"
+                onClick={handleNext}
+              >
+                Next step ›
+              </button>
             ) : (
-              <>
-                <button
-                  type="button"
-                  className="yc-save-btn"
-                  onClick={() => {
-                    alert("Draft saved locally.");
-                  }}
-                >
-                  Save changes
-                </button>
-                <button
-                  type="submit"
-                  className="yc-submit-btn"
-                  disabled={pending || !agreedToTerms}
-                >
-                  {pending ? "Preparing checkout…" : "Submit application"}
-                </button>
-              </>
+              <button
+                type="submit"
+                className="yc-submit-btn"
+                disabled={pending || !agreedToTerms}
+              >
+                {pending ? "Preparing checkout…" : "Submit application"}
+              </button>
             )}
           </div>
         </div>
@@ -820,4 +915,5 @@ export function AddStartupForm() {
 function updateAt<T>(list: T[], index: number, patch: Partial<T>): T[] {
   return list.map((item, i) => (i === index ? { ...item, ...patch } : item));
 }
+
 

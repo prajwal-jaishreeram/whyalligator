@@ -1679,7 +1679,7 @@ select {
 }
 
 /* ============================================================
-   YC Application Form Styles
+   YC Application Form Styles (Faithful match to real YC application)
    ============================================================ */
 
 .yc-add-page {
@@ -1689,7 +1689,7 @@ select {
 }
 
 .yc-page-width {
-  width: min(1080px, calc(100% - 32px));
+  width: min(1040px, calc(100% - 40px));
   margin: 32px auto 0;
 }
 
@@ -1701,10 +1701,81 @@ select {
   max-width: 100%;
 }
 
+/* Strict Box Sizing & Mobile Containment */
+.yc-app-shell *,
+.yc-app-shell *::before,
+.yc-app-shell *::after {
+  box-sizing: border-box !important;
+}
+
+.yc-app-shell input:not([type="checkbox"]):not([type="radio"]),
+.yc-app-shell textarea,
+.yc-app-shell select {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+}
+
+.yc-app-shell input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.yc-app-shell textarea,
+.yc-app-shell select {
+  padding: 10px 14px;
+  background: #ffffff;
+  border: 1px solid #d4d4cd;
+  border-radius: 4px;
+  font-family: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+  color: #111;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.yc-app-shell input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus,
+.yc-app-shell textarea:focus,
+.yc-app-shell select:focus {
+  border-color: #111;
+  box-shadow: 0 0 0 1px #111;
+}
+
+.yc-app-shell input[type="file"] {
+  font-size: 13px;
+  color: #555;
+  padding: 6px 0;
+}
+
+/* Top Bar with always-visible Back */
+.yc-top-bar {
+  display: flex;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.yc-top-back-btn {
+  background: none;
+  border: none;
+  font-family: var(--font-source-serif), Georgia, serif;
+  font-size: 17px;
+  font-style: italic;
+  color: #222;
+  cursor: pointer;
+  padding: 4px 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: opacity 0.15s;
+}
+
+.yc-top-back-btn:hover {
+  opacity: 0.65;
+}
+
 /* Mobile Stepper Header */
 .yc-mobile-header {
   display: none;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .yc-mobile-meta {
@@ -1715,7 +1786,7 @@ select {
 }
 
 .yc-tagline-sub {
-  font-family: var(--font-source-serif), serif;
+  font-family: var(--font-source-serif), Georgia, serif;
   font-size: 24px;
   font-weight: 500;
   font-style: italic;
@@ -1732,7 +1803,7 @@ select {
   display: flex;
   gap: 8px;
   overflow-x: auto;
-  padding-bottom: 4px;
+  padding-bottom: 6px;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
 }
@@ -1747,32 +1818,33 @@ select {
   gap: 6px;
   padding: 6px 14px;
   background: #fff;
-  border: 1px solid #e0e0da;
+  border: 1px solid #d4d4cd;
   border-radius: 999px;
   font-size: 13px;
-  color: #666;
+  color: #555;
   white-space: nowrap;
   cursor: pointer;
   transition: all 0.15s;
+  flex-shrink: 0;
 }
 
 .yc-step-tab.is-active {
-  background: #1a1a1a;
+  background: #111;
   color: #fff;
-  border-color: #1a1a1a;
+  border-color: #111;
   font-weight: 500;
 }
 
 .yc-step-tab .step-num {
   font-size: 11px;
-  opacity: 0.75;
+  opacity: 0.8;
 }
 
 /* Desktop Stepper Body */
 .yc-app-body {
   display: grid;
-  grid-template-columns: 220px 1fr;
-  gap: 40px;
+  grid-template-columns: 200px 1fr;
+  gap: 56px;
   align-items: start;
 }
 
@@ -1792,16 +1864,16 @@ select {
 
 .yc-sidebar-title {
   margin: 0;
-  font-family: var(--font-source-serif), serif;
-  font-size: 26px;
+  font-family: var(--font-source-serif), Georgia, serif;
+  font-size: 24px;
   font-weight: 500;
   font-style: italic;
   color: #111;
-  letter-spacing: -0.5px;
+  letter-spacing: -0.4px;
 }
 
 .yc-sidebar-vintage {
-  font-size: 14px;
+  font-size: 13px;
   color: #737373;
   font-weight: 300;
 }
@@ -1809,31 +1881,28 @@ select {
 .yc-sidebar-nav {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .yc-sidebar-link {
   text-align: left;
   background: none;
   border: none;
-  padding: 8px 12px;
-  border-radius: 6px;
+  padding: 6px 0;
   font-size: 15px;
-  font-weight: 300;
-  color: #555;
+  font-weight: 400;
+  color: #666;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: color 0.15s;
 }
 
 .yc-sidebar-link:hover {
   color: #111;
-  background: rgba(0, 0, 0, 0.04);
 }
 
 .yc-sidebar-link.is-active {
-  font-weight: 600;
+  font-weight: 700;
   color: #000;
-  background: rgba(0, 0, 0, 0.05);
 }
 
 /* Form Main Column */
@@ -1842,34 +1911,43 @@ select {
   width: 100%;
 }
 
+.yc-step-content,
 .yc-step-section {
-  background: var(--card);
-  border: 0.8px solid var(--line);
-  border-radius: 8px;
-  padding: 32px 36px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
+.yc-step-content.is-hidden,
 .yc-step-section.is-hidden {
   display: none;
 }
 
+.yc-step-content.is-visible,
 .yc-step-section.is-visible {
   display: block;
 }
 
-.yc-section-heading {
+.yc-section-title {
   margin: 0 0 20px;
-  font-size: 24px;
-  font-weight: 500;
+  font-size: 26px;
+  font-weight: 600;
   color: #111;
-  letter-spacing: -0.3px;
+  letter-spacing: -0.4px;
 }
 
-.yc-section-desc {
+.yc-section-subtitle {
   margin: -10px 0 24px;
   font-size: 14px;
-  color: var(--muted);
+  color: #555;
   line-height: 1.5;
+}
+
+.yc-subsection-title {
+  margin: 28px 0 8px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #111;
 }
 
 .yc-error-banner {
@@ -1882,22 +1960,31 @@ select {
   margin-bottom: 20px;
 }
 
-/* Fields */
-.yc-field-group {
+/* Form Blocks and Fields */
+.yc-form-block {
   display: grid;
-  gap: 20px;
+  gap: 24px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
-.yc-field-group label,
-.yc-founder-body label,
-.yc-job-card label,
-.yc-question-group label,
-.yc-checkout-fields label {
-  display: grid;
+.yc-field-label {
+  display: grid !important;
   gap: 8px;
   font-size: 14px;
+  font-weight: 600;
+  color: #111;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.yc-input-hint {
+  font-size: 13px;
   font-weight: 400;
-  color: #222;
+  color: #737373;
+  margin-top: -4px;
 }
 
 .req {
@@ -1908,27 +1995,9 @@ select {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
-}
-
-.yc-checkbox-card {
-  display: flex !important;
-  flex-direction: row !important;
-  align-items: center !important;
-  gap: 12px !important;
-  padding: 14px 16px;
-  background: #fff;
-  border: 0.8px solid var(--line);
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 400;
-}
-
-.yc-checkbox-card input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  margin: 0;
-  accent-color: var(--orange);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 /* Founders list & card */
@@ -1937,13 +2006,19 @@ select {
   flex-direction: column;
   gap: 16px;
   margin-bottom: 24px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .yc-founder-card {
-  background: #fff;
-  border: 0.8px solid var(--line);
-  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid #d4d4cd;
+  border-radius: 6px;
   overflow: hidden;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   transition: border-color 0.15s;
 }
 
@@ -1951,7 +2026,7 @@ select {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 18px 20px;
+  padding: 16px 20px;
   cursor: pointer;
   background: #fff;
   gap: 12px;
@@ -1966,7 +2041,7 @@ select {
 
 .yc-founder-name {
   font-size: 16px;
-  font-weight: 500;
+  font-weight: 600;
   color: #111;
 }
 
@@ -1985,15 +2060,14 @@ select {
 .yc-founder-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .yc-text-btn {
   background: none;
   border: none;
-  color: #222;
+  color: #111;
   font-size: 14px;
-  font-weight: 400;
   cursor: pointer;
   padding: 0;
 }
@@ -2002,99 +2076,166 @@ select {
   text-decoration: underline;
 }
 
-.yc-remove-founder-btn {
+.yc-remove-btn {
   background: none;
   border: none;
   color: #999;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px;
   padding: 4px;
 }
 
-.yc-remove-founder-btn:hover {
+.yc-remove-btn:hover {
   color: #e11d48;
 }
 
 .yc-founder-body {
-  padding: 0 20px 20px;
+  padding: 16px 20px 20px;
   border-top: 1px solid #f0f0ea;
   display: grid;
   gap: 16px;
-  margin-top: 4px;
-  padding-top: 16px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
-.yc-add-founder-btn {
+.yc-add-btn {
   align-self: flex-start;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 10px 22px;
+  padding: 8px 22px;
   border-radius: 999px;
   background: #000;
   color: #fff;
   border: none;
-  font-size: 14px;
-  font-weight: 500;
+  font-family: var(--font-source-serif), Georgia, serif;
+  font-size: 15px;
+  font-style: italic;
   cursor: pointer;
   transition: opacity 0.15s;
 }
 
-.yc-add-founder-btn:hover {
+.yc-add-btn:hover {
   opacity: 0.85;
 }
 
-.yc-question-group {
-  margin-top: 24px;
-  padding-top: 24px;
-  border-top: 1px solid #e2e2dc;
+/* Founder Video Dropzone (Matching YC screenshot) */
+.yc-video-box {
   display: grid;
   gap: 20px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.yc-video-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 44px 24px;
+  border: 1.5px dashed #bfbfb5;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.yc-video-dropzone:hover {
+  border-color: #666;
+  background: rgba(0, 0, 0, 0.015);
+}
+
+.yc-upload-arrow {
+  color: #999;
+}
+
+.yc-drop-text {
+  font-size: 15px;
+  color: #555;
+}
+
+.yc-browse-link {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+.yc-video-or {
+  text-align: center;
+  font-size: 14px;
+  color: #888;
+  margin: 4px 0;
+}
+
+/* Checkbox Row */
+.yc-checkbox-row {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 12px !important;
+  font-size: 14px;
+  color: #222;
+  cursor: pointer;
+  margin: 4px 0;
+}
+
+.yc-checkbox-row input[type="checkbox"] {
+  width: 18px !important;
+  height: 18px !important;
+  margin: 0 !important;
+  accent-color: #111;
+  flex-shrink: 0;
 }
 
 /* Jobs list & card */
 .yc-jobs-list {
   display: grid;
   gap: 16px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .yc-job-card {
   background: #fff;
-  border: 0.8px solid var(--line);
-  border-radius: 8px;
+  border: 1px solid #d4d4cd;
+  border-radius: 6px;
   padding: 20px;
   display: grid;
   gap: 16px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
-.yc-job-card-header {
+.yc-job-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-}
-
-.yc-remove-job-btn {
-  background: none;
-  border: none;
-  color: #e11d48;
-  font-size: 13px;
-  cursor: pointer;
+  font-size: 15px;
 }
 
 /* Review & Submit Step */
-.yc-review-card {
+.yc-review-box {
   background: #fff;
-  border: 0.8px solid var(--line);
-  border-radius: 8px;
-  padding: 20px;
+  border: 1px solid #d4d4cd;
+  border-radius: 6px;
+  padding: 20px 24px;
   display: grid;
   gap: 12px;
-  margin-bottom: 24px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .yc-review-title {
-  margin: 0 0 6px;
-  font-size: 16px;
+  margin: 0 0 8px;
+  font-size: 17px;
   font-weight: 600;
   color: #111;
 }
@@ -2102,29 +2243,28 @@ select {
 .yc-review-row {
   display: flex;
   align-items: baseline;
-  gap: 12px;
+  gap: 14px;
   font-size: 14px;
+  color: #222;
 }
 
 .yc-review-label {
   color: #737373;
-  width: 100px;
+  width: 90px;
   flex-shrink: 0;
-}
-
-.yc-checkout-fields {
-  display: grid;
-  gap: 18px;
 }
 
 .yc-terms-box {
   padding: 16px;
   background: #fff;
-  border: 1px solid #e0e0da;
-  border-radius: 8px;
+  border: 1px solid #d4d4cd;
+  border-radius: 6px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
-.yc-terms-checkbox {
+.yc-terms-label {
   display: flex !important;
   flex-direction: row !important;
   align-items: center !important;
@@ -2132,12 +2272,13 @@ select {
   font-size: 14px;
   cursor: pointer;
   margin: 0;
+  line-height: 1.4;
 }
 
-.yc-terms-checkbox input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  margin: 0;
+.yc-terms-label input[type="checkbox"] {
+  width: 18px !important;
+  height: 18px !important;
+  margin: 0 !important;
   accent-color: #111;
   flex-shrink: 0;
 }
@@ -2155,7 +2296,7 @@ select {
   margin: 0;
 }
 
-/* Sticky Bottom Action Bar */
+/* Sticky Bottom Action Bar (Matching YC screenshot) */
 .yc-sticky-bottom-bar {
   position: fixed;
   bottom: 0;
@@ -2164,14 +2305,14 @@ select {
   background: rgba(255, 255, 255, 0.96);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border-top: 1px solid #e2e2dc;
+  border-top: 1px solid #e0e0da;
   padding: 14px 24px;
   z-index: 100;
   box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.04);
 }
 
 .yc-bottom-bar-inner {
-  max-width: 1080px;
+  max-width: 1040px;
   margin: 0 auto;
   display: flex;
   justify-content: space-between;
@@ -2188,7 +2329,7 @@ select {
 .yc-back-btn {
   background: none;
   border: none;
-  font-family: var(--font-source-serif), serif;
+  font-family: var(--font-source-serif), Georgia, serif;
   font-size: 17px;
   font-style: italic;
   color: #222;
@@ -2201,7 +2342,7 @@ select {
 }
 
 .yc-back-btn:hover {
-  opacity: 0.7;
+  opacity: 0.65;
 }
 
 .yc-bottom-right {
@@ -2212,12 +2353,12 @@ select {
 
 .yc-save-btn {
   background: #fff;
-  border: 1px solid #111;
+  border: 1px solid #333;
   color: #111;
   border-radius: 999px;
   padding: 8px 24px;
-  font-family: var(--font-source-serif), serif;
-  font-size: 17px;
+  font-family: var(--font-source-serif), Georgia, serif;
+  font-size: 16px;
   font-style: italic;
   cursor: pointer;
   transition: all 0.15s;
@@ -2227,38 +2368,23 @@ select {
   background: #f4f4f0;
 }
 
-.yc-next-btn {
-  background: #2a2a2a;
-  border: 1px solid #2a2a2a;
+.yc-next-btn,
+.yc-submit-btn {
+  background: #333;
+  border: 1px solid #333;
   color: #fff;
   border-radius: 999px;
   padding: 8px 24px;
-  font-family: var(--font-source-serif), serif;
-  font-size: 17px;
+  font-family: var(--font-source-serif), Georgia, serif;
+  font-size: 16px;
   font-style: italic;
   cursor: pointer;
   transition: all 0.15s;
 }
 
-.yc-next-btn:hover {
-  background: #000;
-}
-
-.yc-submit-btn {
-  background: #383838;
-  border: none;
-  color: #fff;
-  border-radius: 999px;
-  padding: 8px 28px;
-  font-family: var(--font-source-serif), serif;
-  font-size: 17px;
-  font-style: italic;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
+.yc-next-btn:hover,
 .yc-submit-btn:hover:not(:disabled) {
-  background: #111;
+  background: #000;
 }
 
 .yc-submit-btn:disabled {
@@ -2268,6 +2394,11 @@ select {
 
 /* Mobile responsive styles */
 @media (max-width: 860px) {
+  .yc-page-width {
+    width: calc(100% - 24px);
+    margin: 16px auto 0;
+  }
+
   .yc-app-body {
     grid-template-columns: 1fr;
     gap: 0;
@@ -2281,17 +2412,13 @@ select {
     display: block;
   }
 
-  .yc-step-section {
-    padding: 20px 16px;
-  }
-
   .yc-grid-2 {
     grid-template-columns: 1fr;
-    gap: 12px;
+    gap: 16px;
   }
 
   .yc-sticky-bottom-bar {
-    padding: 10px 16px;
+    padding: 10px 14px;
   }
 
   .yc-save-btn,
@@ -2305,6 +2432,15 @@ select {
     font-size: 15px;
     padding: 6px 8px;
   }
+
+  .yc-founder-summary {
+    padding: 14px 16px;
+  }
+
+  .yc-founder-body {
+    padding: 14px 16px 16px;
+  }
 }
+
 
 

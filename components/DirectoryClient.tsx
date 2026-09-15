@@ -75,7 +75,9 @@ export function DirectoryClient({ companies }: { companies: Company[] }) {
       if (hiringOnly && c.jobs.length === 0) return false;
       if (nonprofitOnly && !c.is_nonprofit) return false;
       if (topCompaniesOnly && !c.is_top_company) return false;
+      if (batches.includes("__NONE__")) return false;
       if (batches.length && !batches.includes(c.batch)) return false;
+      if (industries.includes("__NONE__")) return false;
       if (industries.length) {
         const matchesIndustry = c.industries.some((tag) => {
           const lowerTag = tag.toLowerCase();
@@ -93,6 +95,7 @@ export function DirectoryClient({ companies }: { companies: Company[] }) {
         });
         if (!matchesIndustry) return false;
       }
+      if (regions.includes("__NONE__")) return false;
       if (regions.length) {
         const companyLoc = `${c.hq_region} ${c.location}`.toLowerCase();
         const matchesRegion = regions.some((selectedReg) => {
@@ -278,21 +281,45 @@ export function DirectoryClient({ companies }: { companies: Company[] }) {
   );
 
   const activeFilters = [
-    ...batches.map((b) => ({
-      key: `batch-${b}`,
-      label: b,
-      onRemove: () => setBatches(batches.filter((item) => item !== b)),
-    })),
-    ...industries.map((ind) => ({
-      key: `ind-${ind}`,
-      label: ind,
-      onRemove: () => setIndustries(industries.filter((item) => item !== ind)),
-    })),
-    ...regions.map((reg) => ({
-      key: `reg-${reg}`,
-      label: reg,
-      onRemove: () => setRegions(regions.filter((item) => item !== reg)),
-    })),
+    ...(batches.includes("__NONE__")
+      ? [
+          {
+            key: "batch-none",
+            label: "Batch: None",
+            onRemove: () => setBatches([]),
+          },
+        ]
+      : batches.map((b) => ({
+          key: `batch-${b}`,
+          label: b,
+          onRemove: () => setBatches(batches.filter((item) => item !== b)),
+        }))),
+    ...(industries.includes("__NONE__")
+      ? [
+          {
+            key: "ind-none",
+            label: "Industry: None",
+            onRemove: () => setIndustries([]),
+          },
+        ]
+      : industries.map((ind) => ({
+          key: `ind-${ind}`,
+          label: ind,
+          onRemove: () => setIndustries(industries.filter((item) => item !== ind)),
+        }))),
+    ...(regions.includes("__NONE__")
+      ? [
+          {
+            key: "reg-none",
+            label: "Region: None",
+            onRemove: () => setRegions([]),
+          },
+        ]
+      : regions.map((reg) => ({
+          key: `reg-${reg}`,
+          label: reg,
+          onRemove: () => setRegions(regions.filter((item) => item !== reg)),
+        }))),
     ...(hiringOnly
       ? [
           {
@@ -480,7 +507,21 @@ function CollapsibleFilterGroup({
   defaultOpen?: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
+  const isNone = selected.includes("__NONE__");
   const allOn = selected.length === 0;
+
+  function toggleAll() {
+    if (allOn) {
+      onChange(["__NONE__"]);
+    } else {
+      onChange([]);
+    }
+  }
+
+  function toggleItem(name: string) {
+    const clean = selected.filter((x) => x !== "__NONE__");
+    onChange(toggleValue(clean, name));
+  }
 
   return (
     <div className="filter-section">
@@ -500,7 +541,7 @@ function CollapsibleFilterGroup({
             <input
               type="checkbox"
               checked={allOn}
-              onChange={() => onChange([])}
+              onChange={toggleAll}
             />
             <span>{allLabel}</span>
             <em>{allCount}</em>
@@ -509,8 +550,8 @@ function CollapsibleFilterGroup({
             <label className="check-row" key={option.name}>
               <input
                 type="checkbox"
-                checked={selected.includes(option.name)}
-                onChange={() => onChange(toggleValue(selected, option.name))}
+                checked={!isNone && selected.includes(option.name)}
+                onChange={() => toggleItem(option.name)}
               />
               <span>{option.name}</span>
               <em>{option.countLabel ?? option.count}</em>
@@ -545,7 +586,21 @@ function HierarchicalTaxonomyFilterGroup({
 }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const [expandedParents, setExpandedParents] = useState<string[]>([]);
+  const isNone = selected.includes("__NONE__");
   const allOn = selected.length === 0;
+
+  function toggleAll() {
+    if (allOn) {
+      onChange(["__NONE__"]);
+    } else {
+      onChange([]);
+    }
+  }
+
+  function toggleItem(name: string) {
+    const clean = selected.filter((x) => x !== "__NONE__");
+    onChange(toggleValue(clean, name));
+  }
 
   function toggleParentExpanded(name: string) {
     setExpandedParents((current) =>
@@ -571,7 +626,7 @@ function HierarchicalTaxonomyFilterGroup({
             <input
               type="checkbox"
               checked={allOn}
-              onChange={() => onChange([])}
+              onChange={toggleAll}
             />
             <span>{allLabel}</span>
             <em>{allCount}</em>
@@ -580,7 +635,7 @@ function HierarchicalTaxonomyFilterGroup({
           {taxonomy.map((item) => {
             const hasSub = (item.subcategories?.length ?? 0) > 0;
             const isExpanded = expandedParents.includes(item.name);
-            const parentChecked = selected.includes(item.name);
+            const parentChecked = !isNone && selected.includes(item.name);
             const catCount = getCategoryCount(item.name);
 
             return (
@@ -601,7 +656,7 @@ function HierarchicalTaxonomyFilterGroup({
                   <input
                     type="checkbox"
                     checked={parentChecked}
-                    onChange={() => onChange(toggleValue(selected, item.name))}
+                    onChange={() => toggleItem(item.name)}
                   />
                   <span>{item.name}</span>
                   <em>{catCount}</em>
@@ -610,7 +665,7 @@ function HierarchicalTaxonomyFilterGroup({
                 {hasSub && isExpanded ? (
                   <div className="taxonomy-sub-list">
                     {item.subcategories!.map((sub) => {
-                      const subChecked = selected.includes(sub);
+                      const subChecked = !isNone && selected.includes(sub);
                       const subCount = getSubcategoryCount(sub);
 
                       return (
@@ -618,7 +673,7 @@ function HierarchicalTaxonomyFilterGroup({
                           <input
                             type="checkbox"
                             checked={subChecked}
-                            onChange={() => onChange(toggleValue(selected, sub))}
+                            onChange={() => toggleItem(sub)}
                           />
                           <span>{sub}</span>
                           <em>{subCount}</em>
