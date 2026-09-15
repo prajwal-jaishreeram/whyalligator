@@ -20,6 +20,23 @@ export default async function HomePage() {
         <Link href="/add" className="hero-cta">
           Add your startup ($20)
         </Link>
+        <div className="hero-metrics">
+          <div className="hero-metrics-badge">
+            <span className="hero-pulse-dot" />
+            <span>
+              <strong>{companies.length % 3000} / 3,000 listed</strong> in Batch {Math.floor(companies.length / 3000) + 1}
+            </span>
+          </div>
+          <div
+            className="hero-progress-track"
+            title={`${companies.length % 3000} of 3,000 spots filled`}
+          >
+            <div
+              className="hero-progress-fill"
+              style={{ width: `${Math.max(2, ((companies.length % 3000) / 3000) * 100)}%` }}
+            />
+          </div>
+        </div>
       </section>
       <div className="page-width">
         <DirectoryClient companies={companies} />
