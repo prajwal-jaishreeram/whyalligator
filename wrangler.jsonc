@@ -6,6 +6,12 @@
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "workers_dev": true,
   "preview_urls": true,
+  // Use "npm install" instead of "npm ci" because the lockfile is generated
+  // on Windows and may lack Linux-only optional deps like @emnapi/core.
+  "build": {
+    "command": "npx opennextjs-cloudflare build",
+    "install_command": "npm install"
+  },
   "vars": {
     "NEXT_PUBLIC_SUPABASE_URL": "https://sgfgsmoclawrjkdzgyqa.supabase.co",
     "NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNnZmdzbW9jbGF3cmprZHpneXFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMDM5OTQsImV4cCI6MjEwNDg3OTk5NH0.QTWibzIwaee0DfL8PlWqglUTiA_lXDrnX8p3Iy9QbWg",
