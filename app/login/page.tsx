@@ -24,12 +24,16 @@ function AuthForm() {
     try {
       const supabase = createBrowserClient();
       if (mode === "signup") {
-        const { error: signUpError } = await supabase.auth.signUp({
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
         });
         if (signUpError) throw signUpError;
-        setMessage("Account created! You can now log in or check your inbox if email confirmation is required.");
+        if (signUpData.session) {
+          window.location.href = "/dashboard";
+          return;
+        }
+        setMessage("Account created! Please check your inbox if email confirmation is required, or click Log In to sign in.");
       } else {
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email,

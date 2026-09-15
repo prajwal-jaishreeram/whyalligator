@@ -46,10 +46,15 @@ export function DirectoryClient({ companies }: { companies: Company[] }) {
     });
   }, [companies]);
 
-  const batchOptions = useMemo(
-    () => sortedUnique(companies.map((c) => c.batch).filter(Boolean)),
-    [companies],
-  );
+  const currentBatchNum = Math.max(1, Math.floor(companies.length / 3000) + 1);
+  const batchOptions = useMemo(() => {
+    const existing = sortedUnique(companies.map((c) => c.batch).filter(Boolean));
+    const allExpected: string[] = [];
+    for (let i = 1; i <= currentBatchNum; i += 1) {
+      allExpected.push(`Batch ${i}`);
+    }
+    return sortedUnique([...existing, ...allExpected]);
+  }, [companies, currentBatchNum]);
   const industryOptions = useMemo(
     () => sortedUnique(companies.flatMap((c) => c.industries)),
     [companies],
@@ -167,13 +172,17 @@ export function DirectoryClient({ companies }: { companies: Company[] }) {
         title="Batch"
         allLabel="All batches"
         allCount={companies.length}
-        options={batchOptions.map((name) => ({
-          name,
-          count: companies.filter((c) => c.batch === name).length,
-        }))}
+        options={batchOptions.map((name) => {
+          const count = companies.filter((c) => c.batch === name).length;
+          return {
+            name,
+            countLabel: `${count} / 3,000`,
+            count,
+          };
+        })}
         selected={batches}
         onChange={setBatches}
-        defaultOpen={false}
+        defaultOpen={true}
       />
       <HierarchicalTaxonomyFilterGroup
         title="Industry"
@@ -440,7 +449,7 @@ function CollapsibleFilterGroup({
   title: string;
   allLabel: string;
   allCount: number;
-  options: { name: string; count: number }[];
+  options: { name: string; count: number; countLabel?: string }[];
   selected: string[];
   onChange: (next: string[]) => void;
   defaultOpen?: boolean;
@@ -479,7 +488,7 @@ function CollapsibleFilterGroup({
                 onChange={() => onChange(toggleValue(selected, option.name))}
               />
               <span>{option.name}</span>
-              <em>{option.count}</em>
+              <em>{option.countLabel ?? option.count}</em>
             </label>
           ))}
         </div>
@@ -570,7 +579,7 @@ function HierarchicalTaxonomyFilterGroup({
                     onChange={() => onChange(toggleValue(selected, item.name))}
                   />
                   <span>{item.name}</span>
-                  {catCount > 0 ? <em>{catCount}</em> : null}
+                  <em>{catCount}</em>
                 </div>
 
                 {hasSub && isExpanded ? (
@@ -587,7 +596,7 @@ function HierarchicalTaxonomyFilterGroup({
                             onChange={() => onChange(toggleValue(selected, sub))}
                           />
                           <span>{sub}</span>
-                          {subCount > 0 ? <em>{subCount}</em> : null}
+                          <em>{subCount}</em>
                         </label>
                       );
                     })}
