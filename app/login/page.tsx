@@ -2,13 +2,19 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { FormEvent, Suspense, useState } from "react";
+import { FormEvent, Suspense, useEffect, useState } from "react";
 import { createBrowserClient } from "@/lib/supabase";
 
 function AuthForm() {
   const searchParams = useSearchParams();
-  const initialMode = searchParams.get("mode") === "signup" ? "signup" : "login";
-  const [mode, setMode] = useState<"login" | "signup">(initialMode);
+  const urlMode = searchParams.get("mode") === "signup" ? "signup" : "login";
+  const [mode, setMode] = useState<"login" | "signup">(urlMode);
+
+  useEffect(() => {
+    setMode(urlMode);
+    setError(null);
+    setMessage(null);
+  }, [urlMode]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
