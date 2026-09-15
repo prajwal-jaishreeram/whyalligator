@@ -16,12 +16,30 @@ export function createAnonClient(): SupabaseClient {
   );
 }
 
+let browserClientInstance: SupabaseClient | null = null;
+
 export function createBrowserClient(): SupabaseClient {
-  return createClient(
-    required("NEXT_PUBLIC_SUPABASE_URL"),
-    required("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
-    { auth: { persistSession: true, autoRefreshToken: true } },
-  );
+  if (typeof window === "undefined") {
+    return createClient(
+      required("NEXT_PUBLIC_SUPABASE_URL"),
+      required("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
+      { auth: { persistSession: false } },
+    );
+  }
+  if (!browserClientInstance) {
+    browserClientInstance = createClient(
+      required("NEXT_PUBLIC_SUPABASE_URL"),
+      required("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
+      {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true,
+        },
+      },
+    );
+  }
+  return browserClientInstance;
 }
 
 export function createAdminClient(): SupabaseClient {

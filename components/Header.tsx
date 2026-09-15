@@ -112,7 +112,7 @@ export function Header() {
             {userEmail ? (
               <>
                 <Link href="/dashboard" className="login-link" title={userEmail}>
-                  My Startups
+                  Profile
                 </Link>
                 <button
                   type="button"
@@ -156,7 +156,7 @@ export function Header() {
         <div className="mobile-menu">
           {userEmail ? (
             <>
-              <Link href="/dashboard" onClick={close}>My Startups ({userEmail})</Link>
+              <Link href="/dashboard" onClick={close}>Profile</Link>
               <button
                 type="button"
                 className="nav-link"
@@ -172,7 +172,7 @@ export function Header() {
           ) : (
             <>
               <Link href="/login" onClick={close}>Log in</Link>
-              <Link href="/login?mode=signup" onClick={close}>Create account</Link>
+              <Link href="/login?mode=signup" onClick={close}>Sign up</Link>
             </>
           )}
           <Link href="/about" onClick={close}>About</Link>

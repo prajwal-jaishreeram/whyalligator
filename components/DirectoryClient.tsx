@@ -281,45 +281,27 @@ export function DirectoryClient({ companies }: { companies: Company[] }) {
   );
 
   const activeFilters = [
-    ...(batches.includes("__NONE__")
-      ? [
-          {
-            key: "batch-none",
-            label: "Batch: None",
-            onRemove: () => setBatches([]),
-          },
-        ]
-      : batches.map((b) => ({
-          key: `batch-${b}`,
-          label: b,
-          onRemove: () => setBatches(batches.filter((item) => item !== b)),
-        }))),
-    ...(industries.includes("__NONE__")
-      ? [
-          {
-            key: "ind-none",
-            label: "Industry: None",
-            onRemove: () => setIndustries([]),
-          },
-        ]
-      : industries.map((ind) => ({
-          key: `ind-${ind}`,
-          label: ind,
-          onRemove: () => setIndustries(industries.filter((item) => item !== ind)),
-        }))),
-    ...(regions.includes("__NONE__")
-      ? [
-          {
-            key: "reg-none",
-            label: "Region: None",
-            onRemove: () => setRegions([]),
-          },
-        ]
-      : regions.map((reg) => ({
-          key: `reg-${reg}`,
-          label: reg,
-          onRemove: () => setRegions(regions.filter((item) => item !== reg)),
-        }))),
+    ...batches
+      .filter((b) => b !== "__NONE__" && b !== "All batches")
+      .map((b) => ({
+        key: `batch-${b}`,
+        label: b,
+        onRemove: () => setBatches(batches.filter((item) => item !== b)),
+      })),
+    ...industries
+      .filter((ind) => ind !== "__NONE__" && ind !== "All industries")
+      .map((ind) => ({
+        key: `ind-${ind}`,
+        label: ind,
+        onRemove: () => setIndustries(industries.filter((item) => item !== ind)),
+      })),
+    ...regions
+      .filter((reg) => reg !== "__NONE__" && reg !== "Anywhere")
+      .map((reg) => ({
+        key: `reg-${reg}`,
+        label: reg,
+        onRemove: () => setRegions(regions.filter((item) => item !== reg)),
+      })),
     ...(hiringOnly
       ? [
           {

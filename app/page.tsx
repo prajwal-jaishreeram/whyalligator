@@ -23,8 +23,10 @@ export default async function HomePage() {
         <div className="hero-metrics">
           <div className="hero-metrics-badge">
             <span className="hero-pulse-dot" />
-            <span>
-              <strong>{companies.length % 3000} / 3,000 listed</strong> in Batch {Math.floor(companies.length / 3000) + 1}
+            <span className="hero-metrics-text">
+              <strong className="hero-metrics-count">{(companies.length % 3000).toLocaleString()} / 3,000 listed</strong>
+              <span className="hero-metrics-divider">•</span>
+              <span className="hero-metrics-batch">Batch {Math.floor(companies.length / 3000) + 1}</span>
             </span>
           </div>
           <div

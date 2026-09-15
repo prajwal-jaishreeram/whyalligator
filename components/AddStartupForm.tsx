@@ -208,7 +208,7 @@ export function AddStartupForm() {
       {/* App Header for Mobile / Tablet */}
       <div className="yc-mobile-header">
         <div className="yc-mobile-meta">
-          <span className="yc-tagline-sub">YC Application</span>
+          <span className="yc-tagline-sub">Alligator Application</span>
           <span className="yc-batch-tag">Winter 2026</span>
         </div>
         <div className="yc-steps-scroller">
@@ -230,7 +230,7 @@ export function AddStartupForm() {
         {/* Left Vertical Navigation (Desktop) */}
         <aside className="yc-app-sidebar">
           <div className="yc-sidebar-brand">
-            <h3 className="yc-sidebar-title">YC Application</h3>
+            <h3 className="yc-sidebar-title">Alligator Application</h3>
             <span className="yc-sidebar-vintage">Winter 2026</span>
           </div>
           <nav className="yc-sidebar-nav" aria-label="Application Steps">
@@ -518,7 +518,7 @@ export function AddStartupForm() {
               </label>
 
               <label className="yc-field-label">
-                <span>Where do you live now, and where would the company be based after YC? <strong className="req">*</strong></span>
+                <span>Where do you live now, and where would the company be based after Alligator? <strong className="req">*</strong></span>
                 <span className="yc-input-hint">Use the format City A, Country A / City B, Country B</span>
                 <input
                   name="location"
