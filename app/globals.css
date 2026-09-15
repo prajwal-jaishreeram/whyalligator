@@ -1823,6 +1823,47 @@ select {
   font-weight: 400;
 }
 
+.yc-mobile-stepper-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.yc-mobile-nav-arrow {
+  background: #ffffff;
+  border: 1px solid #d4d4cd;
+  border-radius: 999px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  line-height: 1;
+  color: #222;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s;
+  padding: 0 0 2px 0;
+}
+
+.yc-mobile-nav-arrow:hover:not(:disabled) {
+  background: #111;
+  color: #fff;
+  border-color: #111;
+}
+
+.yc-mobile-nav-arrow:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.yc-mobile-stepper-wrap .yc-steps-scroller {
+  flex: 1;
+  min-width: 0;
+}
+
 .yc-steps-scroller {
   display: flex;
   gap: 8px;
