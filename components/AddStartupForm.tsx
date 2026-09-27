@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useRef, useState } from "react";
+import { HQ_REGIONS } from "@/lib/options";
 
 type FounderDraft = {
   name: string;
@@ -358,16 +359,9 @@ export function AddStartupForm() {
                     value={hqRegion}
                     onChange={(e) => setHqRegion(e.target.value)}
                   >
-                    <option>Americas / Canada</option>
-                    <option>Europe</option>
-                    <option>South Asia</option>
-                    <option>Southeast Asia</option>
-                    <option>East Asia</option>
-                    <option>Middle East and North Africa</option>
-                    <option>Latin America</option>
-                    <option>Africa</option>
-                    <option>Oceania</option>
-                    <option>Remote</option>
+                    {HQ_REGIONS.map((region) => (
+                      <option key={region}>{region}</option>
+                    ))}
                   </select>
                 </label>
                 <label className="yc-field-label">

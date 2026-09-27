@@ -219,7 +219,6 @@ export default function EditCompanyPage() {
                 <input
                   name="location"
                   defaultValue={company?.location}
-                  required
                 />
               </label>
             </div>
@@ -304,9 +303,7 @@ export default function EditCompanyPage() {
                   <input
                     value={founder.name}
                     onChange={(e) => {
-                      const copy = [...founders];
-                      copy[idx].name = e.target.value;
-                      setFounders(copy);
+                      setFounders(founders.map((f, i) => i === idx ? { ...f, name: e.target.value } : f));
                     }}
                     required
                   />
@@ -317,9 +314,7 @@ export default function EditCompanyPage() {
                     <input
                       value={founder.title}
                       onChange={(e) => {
-                        const copy = [...founders];
-                        copy[idx].title = e.target.value;
-                        setFounders(copy);
+                        setFounders(founders.map((f, i) => i === idx ? { ...f, title: e.target.value } : f));
                       }}
                     />
                   </label>
@@ -328,9 +323,7 @@ export default function EditCompanyPage() {
                     <input
                       value={founder.twitter_url}
                       onChange={(e) => {
-                        const copy = [...founders];
-                        copy[idx].twitter_url = e.target.value;
-                        setFounders(copy);
+                        setFounders(founders.map((f, i) => i === idx ? { ...f, twitter_url: e.target.value } : f));
                       }}
                     />
                   </label>
@@ -341,9 +334,7 @@ export default function EditCompanyPage() {
                     rows={2}
                     value={founder.bio}
                     onChange={(e) => {
-                      const copy = [...founders];
-                      copy[idx].bio = e.target.value;
-                      setFounders(copy);
+                      setFounders(founders.map((f, i) => i === idx ? { ...f, bio: e.target.value } : f));
                     }}
                   />
                 </label>
@@ -389,9 +380,7 @@ export default function EditCompanyPage() {
                   <input
                     value={job.title}
                     onChange={(e) => {
-                      const copy = [...jobs];
-                      copy[idx].title = e.target.value;
-                      setJobs(copy);
+                      setJobs(jobs.map((j, i) => i === idx ? { ...j, title: e.target.value } : j));
                     }}
                     required
                   />
@@ -402,9 +391,7 @@ export default function EditCompanyPage() {
                     <input
                       value={job.location}
                       onChange={(e) => {
-                        const copy = [...jobs];
-                        copy[idx].location = e.target.value;
-                        setJobs(copy);
+                        setJobs(jobs.map((j, i) => i === idx ? { ...j, location: e.target.value } : j));
                       }}
                     />
                   </label>
@@ -413,9 +400,7 @@ export default function EditCompanyPage() {
                     <input
                       value={job.salary}
                       onChange={(e) => {
-                        const copy = [...jobs];
-                        copy[idx].salary = e.target.value;
-                        setJobs(copy);
+                        setJobs(jobs.map((j, i) => i === idx ? { ...j, salary: e.target.value } : j));
                       }}
                     />
                   </label>
@@ -426,9 +411,7 @@ export default function EditCompanyPage() {
                     type="url"
                     value={job.apply_url}
                     onChange={(e) => {
-                      const copy = [...jobs];
-                      copy[idx].apply_url = e.target.value;
-                      setJobs(copy);
+                      setJobs(jobs.map((j, i) => i === idx ? { ...j, apply_url: e.target.value } : j));
                     }}
                   />
                 </label>

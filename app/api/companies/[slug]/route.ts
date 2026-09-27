@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createAdminClient, createBrowserClient } from "@/lib/supabase";
+import { createAdminClient } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
 
 export const runtime = "nodejs";

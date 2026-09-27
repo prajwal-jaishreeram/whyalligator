@@ -55,9 +55,7 @@ export function parseListingForm(form: FormData): {
   if (description.length < 20 || description.length > 2000) {
     return empty("Company description must be between 20 and 2000 characters.");
   }
-  if (location.length < 2 || location.length > 80) {
-    return empty("Location is required.");
-  }
+
 
   const founderCount = Number(form.get("founder_count") ?? 1);
   const founders: Founder[] = [];
