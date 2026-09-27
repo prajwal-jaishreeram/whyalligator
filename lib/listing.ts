@@ -55,7 +55,18 @@ export function parseListingForm(form: FormData): {
   if (description.length < 20 || description.length > 2000) {
     return empty("Company description must be between 20 and 2000 characters.");
   }
-
+  if (location.length < 2 || location.length > 80) {
+    return empty("Location is required (2-80 characters).");
+  }
+  if (!founded_year || !/^\d{4}$/.test(founded_year)) {
+    return empty("Founded year must be a valid 4-digit year.");
+  }
+  if (!team_size || isNaN(Number(team_size)) || Number(team_size) < 1) {
+    return empty("Team size must be a positive number.");
+  }
+  if (industries.length === 0) {
+    return empty("Please select at least one industry.");
+  }
 
   const founderCount = Number(form.get("founder_count") ?? 1);
   const founders: Founder[] = [];
@@ -65,11 +76,17 @@ export function parseListingForm(form: FormData): {
     const bio = String(form.get(`founder_bio_${i}`) ?? "").trim();
     if (!name && !title && !bio) continue;
     if (name.length < 2) {
-      return empty("Each founder needs a name.");
+      return empty("Each founder needs a name (at least 2 characters).");
+    }
+    if (!title || title.length < 2) {
+      return empty(`Founder "${name}" needs a title/role (at least 2 characters).`);
+    }
+    if (bio.length < 10) {
+      return empty(`Founder "${name}" needs a bio (at least 10 characters).`);
     }
     founders.push({
       name,
-      title: title || "Founder",
+      title,
       bio,
       photo_url: null,
       twitter_url: optionalUrl(String(form.get(`founder_twitter_${i}`) ?? "")),
@@ -85,14 +102,17 @@ export function parseListingForm(form: FormData): {
   for (let i = 0; i < Math.min(Math.max(jobCount, 0), 6); i += 1) {
     const title = String(form.get(`job_title_${i}`) ?? "").trim();
     if (!title) continue;
+    const jobApplyUrl = optionalUrl(String(form.get(`job_apply_url_${i}`) ?? "")) || website_url;
+    if (!/^https?:\/\/.+/i.test(jobApplyUrl)) {
+      return empty(`Job "${title}" needs a valid apply URL.`);
+    }
     jobs.push({
       title,
       location: String(form.get(`job_location_${i}`) ?? "").trim() || location,
       salary: String(form.get(`job_salary_${i}`) ?? "").trim(),
       equity: String(form.get(`job_equity_${i}`) ?? "").trim(),
       experience: String(form.get(`job_experience_${i}`) ?? "").trim(),
-      apply_url:
-        optionalUrl(String(form.get(`job_apply_url_${i}`) ?? "")) || website_url,
+      apply_url: jobApplyUrl,
     });
   }
 

@@ -84,7 +84,16 @@ export function CompanyProfile({ company }: { company: Company }) {
 
   return (
     <div className="profile-page">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "28px" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "12px",
+          marginBottom: "28px",
+        }}
+      >
         <nav className="crumbs" style={{ margin: 0 }}>
           <Link href="/">Home</Link>
           <span>›</span>
@@ -96,7 +105,7 @@ export function CompanyProfile({ company }: { company: Company }) {
           <Link
             href={`/companies/${company.slug || company.id}/edit`}
             className="hero-cta"
-            style={{ height: "36px", fontSize: "14px", padding: "0 18px" }}
+            style={{ height: "36px", fontSize: "14px", padding: "0 18px", marginTop: 0 }}
           >
             Edit this startup
           </Link>
@@ -104,16 +113,18 @@ export function CompanyProfile({ company }: { company: Company }) {
       </div>
 
       <div className="profile-grid">
-        <div>
+        <div style={{ minWidth: 0 }}>
           <header className="profile-hero">
             <Logo
               name={company.company_name}
               src={company.logo_url}
               className="profile-logo"
             />
-            <div>
-              <h1>{company.company_name}</h1>
-              <p className="profile-pitch">{company.pitch}</p>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <h1 style={{ wordBreak: "break-word" }}>{company.company_name}</h1>
+              <p className="profile-pitch" style={{ wordBreak: "break-word" }}>
+                {company.pitch}
+              </p>
               <div className="pill-row">
                 <span className="pill pill-batch">{company.batch}</span>
                 <span className="pill pill-active">
@@ -158,7 +169,9 @@ export function CompanyProfile({ company }: { company: Company }) {
 
           {tab === "company" ? (
             <section>
-              <p className="profile-about">{company.description}</p>
+              <p className="profile-about" style={{ wordBreak: "break-word" }}>
+                {company.description}
+              </p>
 
               {company.founders.length > 0 ? (
                 <>
@@ -171,22 +184,42 @@ export function CompanyProfile({ company }: { company: Company }) {
                           src={founder.photo_url}
                           className="founder-photo"
                         />
-                        <div>
-                          <div className="founder-name-row">
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div className="founder-name-row" style={{ flexWrap: "wrap" }}>
                             <strong>{founder.name}</strong>
                             {founder.twitter_url ? (
-                              <a href={founder.twitter_url} target="_blank" rel="noreferrer" aria-label="X">
+                              <a
+                                href={founder.twitter_url}
+                                target="_blank"
+                                rel="noreferrer"
+                                aria-label="X"
+                              >
                                 <XIcon />
                               </a>
                             ) : null}
                             {founder.linkedin_url ? (
-                              <a href={founder.linkedin_url} target="_blank" rel="noreferrer" aria-label="LinkedIn">
+                              <a
+                                href={founder.linkedin_url}
+                                target="_blank"
+                                rel="noreferrer"
+                                aria-label="LinkedIn"
+                              >
                                 <LinkedInIcon />
                               </a>
                             ) : null}
                           </div>
                           <p className="founder-title">{founder.title}</p>
-                          {founder.bio ? <p className="founder-bio">{founder.bio}</p> : null}
+                          {founder.bio ? (
+                            <p
+                              className="founder-bio"
+                              style={{
+                                wordBreak: "break-word",
+                                overflowWrap: "anywhere",
+                              }}
+                            >
+                              {founder.bio}
+                            </p>
+                          ) : null}
                         </div>
                       </article>
                     ))}
@@ -198,7 +231,11 @@ export function CompanyProfile({ company }: { company: Company }) {
                 <div className="jobs-preview">
                   <div className="jobs-heading">
                     <h2>Jobs at {company.company_name}</h2>
-                    <button type="button" className="text-link" onClick={() => setTab("jobs")}>
+                    <button
+                      type="button"
+                      className="text-link"
+                      onClick={() => setTab("jobs")}
+                    >
                       View all jobs ›
                     </button>
                   </div>
@@ -224,10 +261,16 @@ export function CompanyProfile({ company }: { company: Company }) {
 
         <aside className="profile-side">
           <div className="side-brand">
-            <Logo name={company.company_name} src={company.logo_url} className="side-logo" />
-            <div>
+            <Logo
+              name={company.company_name}
+              src={company.logo_url}
+              className="side-logo"
+            />
+            <div style={{ minWidth: 0, flex: 1 }}>
               <p className="side-kicker">THE Company</p>
-              <p className="side-name">{company.company_name}</p>
+              <p className="side-name" style={{ wordBreak: "break-word" }}>
+                {company.company_name}
+              </p>
             </div>
           </div>
           <dl className="side-meta">
@@ -259,16 +302,31 @@ export function CompanyProfile({ company }: { company: Company }) {
             </div>
           </dl>
           <div className="side-links">
-            <a href={company.website_url} target="_blank" rel="noreferrer" aria-label="Company website">
+            <a
+              href={company.website_url}
+              target="_blank"
+              rel="noreferrer"
+              aria-label="Company website"
+            >
               <LinkIcon />
             </a>
             {company.linkedin_url ? (
-              <a href={company.linkedin_url} target="_blank" rel="noreferrer" aria-label="LinkedIn">
+              <a
+                href={company.linkedin_url}
+                target="_blank"
+                rel="noreferrer"
+                aria-label="LinkedIn"
+              >
                 <LinkedInIcon />
               </a>
             ) : null}
             {company.twitter_url ? (
-              <a href={company.twitter_url} target="_blank" rel="noreferrer" aria-label="X">
+              <a
+                href={company.twitter_url}
+                target="_blank"
+                rel="noreferrer"
+                aria-label="X"
+              >
                 <XIcon />
               </a>
             ) : null}
@@ -284,16 +342,29 @@ function JobRow({
 }: {
   job: Company["jobs"][number];
 }) {
-  const meta = [job.location, job.salary, job.equity, job.experience].filter(Boolean);
+  const meta = [job.location, job.salary, job.equity, job.experience].filter(
+    Boolean
+  );
   return (
     <div className="job-row">
-      <div>
-        <a className="job-title" href={job.apply_url} target="_blank" rel="noreferrer">
+      <div style={{ minWidth: 0, flex: 1 }}>
+        <a
+          className="job-title"
+          href={job.apply_url}
+          target="_blank"
+          rel="noreferrer"
+          style={{ wordBreak: "break-word" }}
+        >
           {job.title}
         </a>
         <p className="job-meta">{meta.join("  ·  ")}</p>
       </div>
-      <a className="job-apply" href={job.apply_url} target="_blank" rel="noreferrer">
+      <a
+        className="job-apply"
+        href={job.apply_url}
+        target="_blank"
+        rel="noreferrer"
+      >
         Apply Now ›
       </a>
     </div>

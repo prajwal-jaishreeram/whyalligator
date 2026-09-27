@@ -122,7 +122,7 @@ export default function DashboardPage() {
       setEditingId(null);
 
       // Clear success after a few seconds
-      setTimeout(() => setEditSuccess(null), 3000);
+      setTimeout(() => setEditSuccess(null), 3500);
     } catch (err: unknown) {
       setEditError(err instanceof Error ? err.message : "Error saving.");
     } finally {
@@ -155,7 +155,7 @@ export default function DashboardPage() {
     return (
       <main
         className="page-width"
-        style={{ padding: "80px 0", textAlign: "center" }}
+        style={{ padding: "80px 16px", textAlign: "center" }}
       >
         <p>Loading your startups...</p>
       </main>
@@ -168,13 +168,23 @@ export default function DashboardPage() {
         <h1>Founder Dashboard</h1>
         <p className="hero-copy">
           Manage and edit your listed startups. Logged in as{" "}
-          <strong>{userEmail}</strong>
+          <strong style={{ wordBreak: "break-all" }}>{userEmail}</strong>
         </p>
       </section>
 
       <div className="page-width">
-        {/* Dashboard Tabs */}
-        <div className="profile-tabs" style={{ marginBottom: "24px" }}>
+        {/* Dashboard Tabs & Actions */}
+        <div
+          className="profile-tabs"
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "12px",
+            alignItems: "center",
+            marginBottom: "24px",
+            paddingBottom: "8px",
+          }}
+        >
           <button
             type="button"
             className={activeTab === "startups" ? "is-on" : ""}
@@ -190,11 +200,25 @@ export default function DashboardPage() {
           >
             Job Listings {allJobs.length > 0 ? <em>{allJobs.length}</em> : null}
           </button>
-          <div style={{ marginLeft: "auto", display: "flex", gap: "12px", alignItems: "center" }}>
+          <div
+            style={{
+              marginLeft: "auto",
+              display: "flex",
+              gap: "12px",
+              alignItems: "center",
+              flexWrap: "wrap",
+            }}
+          >
             <button
               type="button"
               className="ghost-btn"
-              style={{ height: "36px", fontSize: "13px", color: "#dc2626", borderColor: "#fca5a5" }}
+              style={{
+                height: "36px",
+                fontSize: "13px",
+                color: "#dc2626",
+                borderColor: "#fca5a5",
+                cursor: "pointer",
+              }}
               onClick={handleSignOut}
             >
               Log out
@@ -227,10 +251,12 @@ export default function DashboardPage() {
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
+                flexWrap: "wrap",
+                gap: "12px",
                 marginBottom: "20px",
               }}
             >
-              <h2>Your Listed Startups ({companies.length})</h2>
+              <h2 style={{ margin: 0 }}>Your Listed Startups ({companies.length})</h2>
               <Link href="/add" className="apply-btn">
                 + List another startup ($20)
               </Link>
@@ -239,17 +265,19 @@ export default function DashboardPage() {
             {companies.length === 0 ? (
               <div
                 className="form-card"
-                style={{ textAlign: "center", padding: "60px 20px" }}
+                style={{ textAlign: "center", padding: "48px 20px" }}
               >
                 <p
                   style={{
                     fontSize: "16px",
                     color: "var(--muted)",
                     marginBottom: "20px",
+                    lineHeight: 1.6,
                   }}
                 >
-                  No startups found under {userEmail}. If you paid for a listing
-                  with this email, it will appear here automatically.
+                  No startups found under <strong>{userEmail}</strong>. If you
+                  paid for a listing with this email, it will appear here
+                  automatically.
                 </p>
                 <Link href="/add" className="hero-cta">
                   List your startup now ($20)
@@ -264,14 +292,14 @@ export default function DashboardPage() {
                     style={{
                       flexDirection: "column",
                       alignItems: "stretch",
-                      gap: "12px",
+                      gap: "14px",
                     }}
                   >
                     <div
                       style={{
                         display: "flex",
                         justifyContent: "space-between",
-                        alignItems: "center",
+                        alignItems: "flex-start",
                         flexWrap: "wrap",
                         gap: "16px",
                       }}
@@ -279,13 +307,20 @@ export default function DashboardPage() {
                       <div
                         style={{
                           display: "flex",
-                          alignItems: "center",
-                          gap: "16px",
+                          alignItems: "flex-start",
+                          gap: "14px",
+                          minWidth: 0,
+                          flex: 1,
                         }}
                       >
                         <div
                           className="company-logo-wrap"
-                          style={{ width: "48px", flexBasis: "48px" }}
+                          style={{
+                            width: "48px",
+                            flexBasis: "48px",
+                            flexShrink: 0,
+                            padding: 0,
+                          }}
                         >
                           {company.logo_url ? (
                             // eslint-disable-next-line @next/next/no-img-element
@@ -308,13 +343,14 @@ export default function DashboardPage() {
                             </div>
                           )}
                         </div>
-                        <div>
+                        <div style={{ minWidth: 0, flex: 1 }}>
                           {editingId === company.id ? (
                             <div
                               style={{
                                 display: "flex",
                                 flexDirection: "column",
                                 gap: "8px",
+                                width: "100%",
                               }}
                             >
                               <input
@@ -325,11 +361,11 @@ export default function DashboardPage() {
                                 style={{
                                   fontSize: "16px",
                                   fontWeight: 500,
-                                  padding: "6px 10px",
+                                  padding: "8px 12px",
                                   border: "1px solid #d1d5db",
                                   borderRadius: "6px",
                                   width: "100%",
-                                  maxWidth: "400px",
+                                  boxSizing: "border-box",
                                 }}
                               />
                               <input
@@ -339,11 +375,11 @@ export default function DashboardPage() {
                                 maxLength={140}
                                 style={{
                                   fontSize: "14px",
-                                  padding: "6px 10px",
+                                  padding: "8px 12px",
                                   border: "1px solid #d1d5db",
                                   borderRadius: "6px",
                                   width: "100%",
-                                  maxWidth: "400px",
+                                  boxSizing: "border-box",
                                   color: "var(--muted)",
                                 }}
                               />
@@ -365,6 +401,7 @@ export default function DashboardPage() {
                                   fontSize: "18px",
                                   margin: "0 0 4px",
                                   fontWeight: 500,
+                                  wordBreak: "break-word",
                                 }}
                               >
                                 {company.company_name}
@@ -374,6 +411,7 @@ export default function DashboardPage() {
                                   margin: 0,
                                   fontSize: "14px",
                                   color: "var(--muted)",
+                                  wordBreak: "break-word",
                                 }}
                               >
                                 {company.pitch}
@@ -400,6 +438,7 @@ export default function DashboardPage() {
                                 height: "36px",
                                 fontSize: "14px",
                                 padding: "0 16px",
+                                marginTop: 0,
                               }}
                               onClick={() => saveQuickEdit(company)}
                               disabled={editSaving}
@@ -441,6 +480,7 @@ export default function DashboardPage() {
                                 height: "36px",
                                 fontSize: "14px",
                                 padding: "0 16px",
+                                marginTop: 0,
                               }}
                             >
                               Full Edit
@@ -453,7 +493,11 @@ export default function DashboardPage() {
                     {/* Company meta pills */}
                     <div
                       className="pill-row"
-                      style={{ paddingLeft: "64px" }}
+                      style={{
+                        display: "flex",
+                        flexWrap: "wrap",
+                        gap: "6px",
+                      }}
                     >
                       <span className="pill pill-batch">{company.batch}</span>
                       {company.location ? (
@@ -476,7 +520,10 @@ export default function DashboardPage() {
                           {company.jobs.length === 1 ? "role" : "roles"}
                         </span>
                       ) : null}
-                      <span className="pill" style={{ background: "#f0f9ff", color: "#0369a1" }}>
+                      <span
+                        className="pill"
+                        style={{ background: "#f0f9ff", color: "#0369a1" }}
+                      >
                         {company.founders.length}{" "}
                         {company.founders.length === 1 ? "founder" : "founders"}
                       </span>
@@ -496,10 +543,12 @@ export default function DashboardPage() {
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
+                flexWrap: "wrap",
+                gap: "12px",
                 marginBottom: "20px",
               }}
             >
-              <h2>
+              <h2 style={{ margin: 0 }}>
                 Your Job Listings ({allJobs.length})
               </h2>
               {companies.length > 0 ? (
@@ -515,17 +564,18 @@ export default function DashboardPage() {
             {allJobs.length === 0 ? (
               <div
                 className="form-card"
-                style={{ textAlign: "center", padding: "60px 20px" }}
+                style={{ textAlign: "center", padding: "48px 20px" }}
               >
                 <p
                   style={{
                     fontSize: "16px",
                     color: "var(--muted)",
                     marginBottom: "20px",
+                    lineHeight: 1.6,
                   }}
                 >
-                  No job listings yet. You can add jobs when editing your
-                  startup.
+                  No job listings yet. You can add open roles when editing your
+                  startup listing.
                 </p>
                 {companies.length > 0 ? (
                   <Link
@@ -546,12 +596,21 @@ export default function DashboardPage() {
                   <div
                     className="job-row"
                     key={`${job.company_slug}-${job.title}-${idx}`}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                      gap: "12px",
+                      padding: "16px 0",
+                    }}
                   >
                     <div
                       style={{
                         display: "flex",
                         alignItems: "center",
                         gap: "12px",
+                        minWidth: 0,
                         flex: 1,
                       }}
                     >
@@ -561,6 +620,7 @@ export default function DashboardPage() {
                           width: "36px",
                           height: "36px",
                           flexShrink: 0,
+                          padding: 0,
                         }}
                       >
                         {job.company_logo ? (
@@ -584,13 +644,22 @@ export default function DashboardPage() {
                           </div>
                         )}
                       </div>
-                      <div>
-                        <strong style={{ fontSize: "15px" }}>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <strong
+                          style={{
+                            fontSize: "15px",
+                            display: "block",
+                            wordBreak: "break-word",
+                          }}
+                        >
                           {job.title}
                         </strong>
                         <p
                           className="job-meta"
-                          style={{ margin: "2px 0 0" }}
+                          style={{
+                            margin: "2px 0 0",
+                            wordBreak: "break-word",
+                          }}
                         >
                           {[
                             job.company_name,
@@ -604,7 +673,14 @@ export default function DashboardPage() {
                         </p>
                       </div>
                     </div>
-                    <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "8px",
+                        alignItems: "center",
+                        flexWrap: "wrap",
+                      }}
+                    >
                       {job.apply_url ? (
                         <a
                           className="ghost-btn"
@@ -623,6 +699,7 @@ export default function DashboardPage() {
                           height: "32px",
                           fontSize: "13px",
                           padding: "0 12px",
+                          marginTop: 0,
                         }}
                       >
                         Edit
@@ -636,7 +713,13 @@ export default function DashboardPage() {
             {/* Per-company breakdown */}
             {companies.length > 1 ? (
               <div style={{ marginTop: "32px" }}>
-                <h3 style={{ fontSize: "16px", marginBottom: "12px", color: "var(--muted)" }}>
+                <h3
+                  style={{
+                    fontSize: "16px",
+                    marginBottom: "12px",
+                    color: "var(--muted)",
+                  }}
+                >
                   Jobs by Company
                 </h3>
                 {companies.map((company) => (
@@ -646,13 +729,15 @@ export default function DashboardPage() {
                         display: "flex",
                         justifyContent: "space-between",
                         alignItems: "center",
+                        flexWrap: "wrap",
+                        gap: "8px",
                         marginBottom: "8px",
                       }}
                     >
-                      <strong>{company.company_name}</strong>
-                      <span
-                        style={{ fontSize: "13px", color: "var(--muted)" }}
-                      >
+                      <strong style={{ wordBreak: "break-word" }}>
+                        {company.company_name}
+                      </strong>
+                      <span style={{ fontSize: "13px", color: "var(--muted)" }}>
                         {company.jobs.length}{" "}
                         {company.jobs.length === 1 ? "job" : "jobs"}
                       </span>
@@ -662,7 +747,7 @@ export default function DashboardPage() {
                         style={{
                           fontSize: "14px",
                           color: "var(--muted)",
-                          paddingLeft: "12px",
+                          paddingLeft: "8px",
                         }}
                       >
                         No jobs posted.{" "}

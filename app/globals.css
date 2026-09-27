@@ -1700,6 +1700,30 @@ select {
   .apply-btn {
     padding: 0 14px 2px;
   }
+
+  .form-card {
+    padding: 20px 16px;
+    border-radius: 8px;
+  }
+
+  .page-width.narrow {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .profile-hero {
+    gap: 14px;
+  }
+
+  .founder-card {
+    padding: 14px;
+    gap: 12px;
+  }
+
+  .founder-photo {
+    width: 56px;
+    height: 56px;
+  }
 }
 
 /* ============================================================

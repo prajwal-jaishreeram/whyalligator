@@ -219,6 +219,7 @@ export default function EditCompanyPage() {
                 <input
                   name="location"
                   defaultValue={company?.location}
+                  required
                 />
               </label>
             </div>
@@ -229,6 +230,10 @@ export default function EditCompanyPage() {
                 <input
                   name="founded_year"
                   defaultValue={company?.founded_year}
+                  required
+                  type="number"
+                  min="1900"
+                  max="2030"
                 />
               </label>
               <label>
@@ -236,6 +241,9 @@ export default function EditCompanyPage() {
                 <input
                   name="team_size"
                   defaultValue={company?.team_size}
+                  required
+                  type="number"
+                  min="1"
                 />
               </label>
             </div>
@@ -316,6 +324,7 @@ export default function EditCompanyPage() {
                       onChange={(e) => {
                         setFounders(founders.map((f, i) => i === idx ? { ...f, title: e.target.value } : f));
                       }}
+                      required
                     />
                   </label>
                   <label>
@@ -336,6 +345,8 @@ export default function EditCompanyPage() {
                     onChange={(e) => {
                       setFounders(founders.map((f, i) => i === idx ? { ...f, bio: e.target.value } : f));
                     }}
+                    required
+                    minLength={10}
                   />
                 </label>
                 <button
@@ -413,6 +424,7 @@ export default function EditCompanyPage() {
                     onChange={(e) => {
                       setJobs(jobs.map((j, i) => i === idx ? { ...j, apply_url: e.target.value } : j));
                     }}
+                    required
                   />
                 </label>
                 <button
