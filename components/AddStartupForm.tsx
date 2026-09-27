@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useRef, useState } from "react";
+import { FormEvent, useRef, useState, useMemo } from "react";
 import { HQ_REGIONS, INDUSTRY_TAXONOMY } from "@/lib/options";
 
 type FounderDraft = {
@@ -10,6 +10,7 @@ type FounderDraft = {
   bio: string;
   twitter: string;
   linkedin: string;
+  photoPreview?: string | null;
 };
 
 type JobDraft = {
@@ -36,6 +37,7 @@ const emptyFounder = (): FounderDraft => ({
   bio: "",
   twitter: "",
   linkedin: "",
+  photoPreview: null,
 });
 
 const emptyJob = (): JobDraft => ({
@@ -48,9 +50,10 @@ const emptyJob = (): JobDraft => ({
 });
 
 function isValidUrl(str: string): boolean {
+  if (!str.trim()) return false;
   try {
-    new URL(str);
-    return true;
+    const url = new URL(str.startsWith("http://") || str.startsWith("https://") ? str : `https://${str}`);
+    return url.protocol === "http:" || url.protocol === "https:";
   } catch {
     return false;
   }
@@ -58,6 +61,7 @@ function isValidUrl(str: string): boolean {
 
 export function AddStartupForm() {
   const formRef = useRef<HTMLFormElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [currentStep, setCurrentStep] = useState<StepId>("company");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -76,10 +80,12 @@ export function AddStartupForm() {
   const [linkedinUrl, setLinkedinUrl] = useState("");
   const [twitterUrl, setTwitterUrl] = useState("");
   const [isNonprofit, setIsNonprofit] = useState(false);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
-  // Industry Dropdown state
+  // Industry selector state
   const [industriesOpen, setIndustriesOpen] = useState(false);
+  const [industrySearch, setIndustrySearch] = useState("");
 
   // Founders state
   const [founders, setFounders] = useState<FounderDraft[]>([emptyFounder()]);
@@ -94,11 +100,28 @@ export function AddStartupForm() {
 
   const stepIndex = STEPS.findIndex((s) => s.id === currentStep);
 
+  // Filter industry taxonomy based on search
+  const filteredTaxonomy = useMemo(() => {
+    const query = industrySearch.trim().toLowerCase();
+    if (!query) return INDUSTRY_TAXONOMY;
+    return INDUSTRY_TAXONOMY.map((parent) => {
+      const parentMatches = parent.name.toLowerCase().includes(query);
+      const matchingSubs = parent.subcategories?.filter((sub) =>
+        sub.toLowerCase().includes(query)
+      );
+      if (parentMatches) return parent;
+      if (matchingSubs && matchingSubs.length > 0) {
+        return { ...parent, subcategories: matchingSubs };
+      }
+      return null;
+    }).filter(Boolean) as typeof INDUSTRY_TAXONOMY;
+  }, [industrySearch]);
+
   function validateStep(step: StepId): boolean {
     setError(null);
     if (step === "company") {
-      if (!companyName.trim()) {
-        setError("Please enter your company name.");
+      if (!companyName.trim() || companyName.trim().length < 2) {
+        setError("Company name must be at least 2 characters.");
         return false;
       }
       if (!pitch.trim() || pitch.length < 4) {
@@ -109,47 +132,88 @@ export function AddStartupForm() {
         setError("Please describe what your company does (at least 20 characters).");
         return false;
       }
-      if (!websiteUrl.trim() || !websiteUrl.startsWith("https://")) {
-        setError("Please enter a valid website URL starting with https://");
+      if (!websiteUrl.trim() || !isValidUrl(websiteUrl)) {
+        setError("Please enter a valid website URL (e.g. https://example.com).");
         return false;
       }
       if (!location.trim() || location.trim().length < 2) {
-        setError("Please enter a valid location (at least 2 characters).");
+        setError("Location is compulsory (at least 2 characters).");
         return false;
       }
-      if (!/^\d{4}$/.test(foundedYear)) {
-        setError("Please enter a valid 4-digit founded year.");
+      if (!foundedYear || !/^\d{4}$/.test(foundedYear) || Number(foundedYear) < 1900 || Number(foundedYear) > 2030) {
+        setError("Please enter a valid 4-digit founded year (between 1900 and 2030).");
         return false;
       }
-      if (!teamSize || parseInt(teamSize) <= 0) {
-        setError("Please enter a valid positive team size.");
+      if (!teamSize || parseInt(teamSize, 10) <= 0) {
+        setError("Please enter a valid team size (at least 1).");
+        return false;
+      }
+      if (!logoFile && !logoPreview) {
+        setError("Company logo is compulsory. Please upload an image logo.");
         return false;
       }
       if (selectedIndustries.length === 0) {
-        setError("Please select at least one industry.");
+        setError("Please select at least one industry for your company.");
         return false;
       }
       if (linkedinUrl && !isValidUrl(linkedinUrl)) {
-        setError("Please enter a valid LinkedIn URL.");
+        setError("Please enter a valid LinkedIn URL (e.g. https://linkedin.com/company/acme).");
         return false;
       }
       if (twitterUrl && !isValidUrl(twitterUrl)) {
-        setError("Please enter a valid Twitter URL.");
+        setError("Please enter a valid Twitter/X URL (e.g. https://x.com/acme).");
         return false;
       }
     } else if (step === "founders") {
-      const first = founders[0];
-      if (!first || !first.name.trim() || first.name.trim().length < 2) {
-        setError("Please add the first founder's name (at least 2 characters).");
+      if (founders.length === 0) {
+        setError("Please add at least one founder.");
         return false;
       }
-      if (!first.title.trim() || first.title.trim().length < 2) {
-        setError("Please add the first founder's title (at least 2 characters).");
-        return false;
+      for (let i = 0; i < founders.length; i++) {
+        const f = founders[i];
+        const num = i + 1;
+        if (!f.name.trim() || f.name.trim().length < 2) {
+          setError(`Founder #${num} must have a name (at least 2 characters).`);
+          setExpandedFounder(i);
+          return false;
+        }
+        if (!f.title.trim() || f.title.trim().length < 2) {
+          setError(`Founder #${num} (${f.name}) must have a title or role (e.g. Founder & CEO).`);
+          setExpandedFounder(i);
+          return false;
+        }
+        if (!f.bio.trim() || f.bio.trim().length < 10) {
+          setError(`Founder #${num} (${f.name}) bio is compulsory (at least 10 characters).`);
+          setExpandedFounder(i);
+          return false;
+        }
+        if (f.twitter && !isValidUrl(f.twitter)) {
+          setError(`Founder #${num} (${f.name}) Twitter must be a valid URL.`);
+          setExpandedFounder(i);
+          return false;
+        }
+        if (f.linkedin && !isValidUrl(f.linkedin)) {
+          setError(`Founder #${num} (${f.name}) LinkedIn must be a valid URL.`);
+          setExpandedFounder(i);
+          return false;
+        }
       }
-      if (!first.bio.trim() || first.bio.trim().length < 10) {
-        setError("Please add the first founder's bio (at least 10 characters).");
-        return false;
+    } else if (step === "jobs") {
+      for (let i = 0; i < jobs.length; i++) {
+        const j = jobs[i];
+        const num = i + 1;
+        if (!j.title.trim()) {
+          setError(`Job #${num} needs a job title.`);
+          return false;
+        }
+        if (!j.location.trim()) {
+          setError(`Job #${num} (${j.title}) needs a location (e.g. Remote or San Francisco).`);
+          return false;
+        }
+        if (j.apply_url && !isValidUrl(j.apply_url)) {
+          setError(`Job #${num} (${j.title}) needs a valid Apply URL.`);
+          return false;
+        }
       }
     }
     return true;
@@ -178,18 +242,17 @@ export function AddStartupForm() {
     event.preventDefault();
     setError(null);
 
+    if (!validateStep("company") || !validateStep("founders") || !validateStep("jobs")) {
+      return;
+    }
+
+    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setError("Please provide a valid founder email address.");
+      return;
+    }
+
     if (!agreedToTerms) {
       setError("Please check the box agreeing to the Terms of Use and Privacy Policy before submitting.");
-      return;
-    }
-
-    if (!email.trim()) {
-      setError("Please provide a founder email address.");
-      return;
-    }
-
-    if (!validateStep("company") || !validateStep("founders")) {
-      setError("Please ensure all required fields in Company and Founders steps are filled correctly.");
       return;
     }
 
@@ -197,6 +260,7 @@ export function AddStartupForm() {
     const data = new FormData(event.currentTarget);
     data.set("founder_count", String(founders.length));
     data.set("job_count", String(jobs.length));
+    data.set("industries", selectedIndustries.join(","));
 
     try {
       const response = await fetch("/api/checkout", {
@@ -218,14 +282,25 @@ export function AddStartupForm() {
   }
 
   const toggleIndustry = (ind: string) => {
-    setSelectedIndustries((prev) => 
+    setSelectedIndustries((prev) =>
       prev.includes(ind) ? prev.filter((i) => i !== ind) : [...prev, ind]
     );
   };
 
+  const handleLogoChange = (file: File | undefined) => {
+    if (file) {
+      setLogoFile(file);
+      const url = URL.createObjectURL(file);
+      setLogoPreview(url);
+    } else {
+      setLogoFile(null);
+      setLogoPreview(null);
+    }
+  };
+
   return (
     <form ref={formRef} className="yc-app-shell" onSubmit={onSubmit}>
-      {/* Top Header Row - Back button only visible when stepIndex > 0 */}
+      {/* Top Header Row */}
       {stepIndex > 0 ? (
         <div className="yc-top-bar">
           <button
@@ -243,7 +318,7 @@ export function AddStartupForm() {
       <div className="yc-mobile-header">
         <div className="yc-mobile-meta">
           <span className="yc-tagline-sub">Alligator Application</span>
-          <span className="yc-batch-tag">Winter 2026</span>
+          <span className="yc-batch-tag">Newest First</span>
         </div>
         <div className="yc-mobile-stepper-wrap">
           <button
@@ -263,7 +338,9 @@ export function AddStartupForm() {
                 key={s.id}
                 type="button"
                 className={`yc-step-tab ${currentStep === s.id ? "is-active" : ""}`}
-                onClick={() => goToStep(s.id)}
+                onClick={() => {
+                  if (validateStep(currentStep)) goToStep(s.id);
+                }}
               >
                 <span className="step-num">{idx + 1}</span>
                 <span className="step-txt">{s.label}</span>
@@ -291,7 +368,7 @@ export function AddStartupForm() {
         <aside className="yc-app-sidebar">
           <div className="yc-sidebar-brand">
             <h3 className="yc-sidebar-title">Alligator Application</h3>
-            <span className="yc-sidebar-vintage">Winter 2026</span>
+            <span className="yc-sidebar-vintage">Batch Auto-Assigned</span>
           </div>
           <nav className="yc-sidebar-nav" aria-label="Application Steps">
             {STEPS.map((s) => (
@@ -299,7 +376,9 @@ export function AddStartupForm() {
                 key={s.id}
                 type="button"
                 className={`yc-sidebar-link ${currentStep === s.id ? "is-active" : ""}`}
-                onClick={() => goToStep(s.id)}
+                onClick={() => {
+                  if (validateStep(currentStep)) goToStep(s.id);
+                }}
               >
                 {s.label}
               </button>
@@ -320,6 +399,7 @@ export function AddStartupForm() {
                 <span>Company name <strong className="req">*</strong></span>
                 <input
                   name="company_name"
+                  required
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
                   maxLength={80}
@@ -332,6 +412,7 @@ export function AddStartupForm() {
                 <span>One-line pitch <strong className="req">*</strong></span>
                 <input
                   name="pitch"
+                  required
                   maxLength={140}
                   value={pitch}
                   onChange={(e) => setPitch(e.target.value)}
@@ -344,6 +425,7 @@ export function AddStartupForm() {
                 <span>About the company <strong className="req">*</strong></span>
                 <textarea
                   name="description"
+                  required
                   minLength={20}
                   maxLength={2000}
                   rows={5}
@@ -360,6 +442,7 @@ export function AddStartupForm() {
                   <input
                     name="website_url"
                     type="url"
+                    required
                     value={websiteUrl}
                     onChange={(e) => setWebsiteUrl(e.target.value)}
                     placeholder="https://example.com"
@@ -370,6 +453,7 @@ export function AddStartupForm() {
                   <span>Location <strong className="req">*</strong></span>
                   <input
                     name="location"
+                    required
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
                     placeholder="San Francisco, CA or Remote"
@@ -383,11 +467,12 @@ export function AddStartupForm() {
                   <input
                     name="founded_year"
                     type="number"
+                    required
                     min="1900"
                     max="2030"
                     value={foundedYear}
                     onChange={(e) => setFoundedYear(e.target.value)}
-                    placeholder="2026"
+                    placeholder="2024"
                   />
                 </label>
                 <label className="yc-field-label">
@@ -395,11 +480,12 @@ export function AddStartupForm() {
                   <input
                     name="team_size"
                     type="number"
+                    required
                     min="1"
-                    max="10000"
+                    max="100000"
                     value={teamSize}
                     onChange={(e) => setTeamSize(e.target.value)}
-                    placeholder="3"
+                    placeholder="5"
                   />
                 </label>
               </div>
@@ -409,11 +495,12 @@ export function AddStartupForm() {
                   <span>HQ region <strong className="req">*</strong></span>
                   <select
                     name="hq_region"
+                    required
                     value={hqRegion}
                     onChange={(e) => setHqRegion(e.target.value)}
                   >
                     {HQ_REGIONS.map((region) => (
-                      <option key={region}>{region}</option>
+                      <option key={region} value={region}>{region}</option>
                     ))}
                   </select>
                 </label>
@@ -421,104 +508,283 @@ export function AddStartupForm() {
                   <span>Status <strong className="req">*</strong></span>
                   <select
                     name="activity_status"
+                    required
                     value={activityStatus}
                     onChange={(e) => setActivityStatus(e.target.value)}
                   >
-                    <option>Active</option>
-                    <option>Stealth</option>
-                    <option>Public</option>
-                    <option>Acquired</option>
+                    <option value="Active">Active</option>
+                    <option value="Stealth">Stealth</option>
+                    <option value="Public">Public</option>
+                    <option value="Acquired">Acquired</option>
                   </select>
                 </label>
               </div>
 
-              <label className="yc-field-label">
-                <span>Company logo <strong className="req">*</strong></span>
-                <input 
-                  name="logo" 
-                  type="file" 
-                  accept="image/*" 
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      setLogoPreview(URL.createObjectURL(file));
-                    } else {
-                      setLogoPreview(null);
-                    }
-                  }}
-                />
-              </label>
-
+              {/* COMPANY LOGO WITH IMMEDIATE LIVE PREVIEW */}
               <div className="yc-field-label">
-                <span>Industries <strong className="req">*</strong></span>
-                <input type="hidden" name="industries" value={selectedIndustries.join(",")} />
-                
-                <div className="yc-industry-pills" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
-                  {selectedIndustries.map(ind => (
-                     <span key={ind} className="yc-pill" style={{ background: '#eee', padding: '2px 8px', borderRadius: '12px', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                       {ind}
-                       <button type="button" onClick={() => toggleIndustry(ind)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>✕</button>
-                     </span>
-                  ))}
-                </div>
-
-                <div style={{ position: 'relative' }}>
-                  <button type="button" onClick={() => setIndustriesOpen(!industriesOpen)} style={{ width: '100%', padding: '8px', textAlign: 'left', border: '1px solid #ccc', borderRadius: '4px', background: '#fff' }}>
-                    {selectedIndustries.length > 0 ? "Select more industries..." : "Select industries..."}
-                  </button>
-                  
-                  {industriesOpen && (
-                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #ccc', maxHeight: '300px', overflowY: 'auto', zIndex: 10, padding: '8px', borderRadius: '4px', marginTop: '4px' }}>
-                      {INDUSTRY_TAXONOMY.map(parent => (
-                        <div key={parent.name} style={{ marginBottom: '8px' }}>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold' }}>
-                            <input 
-                              type="checkbox" 
-                              checked={selectedIndustries.includes(parent.name)}
-                              onChange={() => toggleIndustry(parent.name)}
-                            />
-                            {parent.name}
-                          </label>
-                          {selectedIndustries.includes(parent.name) && parent.subcategories && (
-                            <div style={{ marginLeft: '24px', marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                              {parent.subcategories.map(sub => (
-                                <label key={sub} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                  <input 
-                                    type="checkbox" 
-                                    checked={selectedIndustries.includes(sub)}
-                                    onChange={() => toggleIndustry(sub)}
-                                  />
-                                  {sub}
-                                </label>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ))}
+                <span>Company logo <strong className="req">*</strong></span>
+                <div style={{ display: "flex", alignItems: "center", gap: "16px", marginTop: "6px" }}>
+                  {logoPreview ? (
+                    <div style={{ position: "relative", width: 64, height: 64, flexShrink: 0 }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={logoPreview}
+                        alt="Logo preview"
+                        style={{
+                          width: 64,
+                          height: 64,
+                          objectFit: "cover",
+                          borderRadius: 8,
+                          border: "1px solid #d4d4cd",
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <div
+                      style={{
+                        width: 64,
+                        height: 64,
+                        borderRadius: 8,
+                        background: "#e5e5dc",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#666",
+                        fontSize: "24px",
+                        fontWeight: 600,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {companyName ? companyName.charAt(0).toUpperCase() : "?"}
                     </div>
                   )}
+                  <div style={{ flex: 1 }}>
+                    <input
+                      ref={fileInputRef}
+                      name="logo"
+                      type="file"
+                      accept="image/*"
+                      style={{ display: "block", fontSize: "14px" }}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        handleLogoChange(file);
+                      }}
+                    />
+                    <span className="yc-input-hint" style={{ marginTop: "4px", display: "block" }}>
+                      PNG, JPG, WebP or GIF up to 2MB. Square or rounded recommended.
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* INDUSTRIES SELECTOR */}
+              <div className="yc-field-label">
+                <span>Industries <strong className="req">*</strong> (select at least 1)</span>
+                <input type="hidden" name="industries" value={selectedIndustries.join(",")} />
+
+                {/* Selected Pills */}
+                {selectedIndustries.length > 0 ? (
+                  <div
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: "6px",
+                      margin: "8px 0",
+                    }}
+                  >
+                    {selectedIndustries.map((ind) => (
+                      <span
+                        key={ind}
+                        style={{
+                          background: "#111",
+                          color: "#fff",
+                          padding: "3px 10px",
+                          borderRadius: "999px",
+                          fontSize: "13px",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "6px",
+                        }}
+                      >
+                        {ind}
+                        <button
+                          type="button"
+                          onClick={() => toggleIndustry(ind)}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            color: "#fff",
+                            cursor: "pointer",
+                            padding: 0,
+                            lineHeight: 1,
+                            fontSize: "12px",
+                          }}
+                          aria-label={`Remove ${ind}`}
+                        >
+                          ✕
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+
+                {/* Dropdown toggle button */}
+                <div style={{ position: "relative", marginTop: "6px" }}>
+                  <button
+                    type="button"
+                    onClick={() => setIndustriesOpen(!industriesOpen)}
+                    style={{
+                      width: "100%",
+                      padding: "10px 14px",
+                      textAlign: "left",
+                      border: "1px solid #d4d4cd",
+                      borderRadius: "6px",
+                      background: "#fff",
+                      cursor: "pointer",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      fontSize: "14px",
+                    }}
+                  >
+                    <span>
+                      {selectedIndustries.length > 0
+                        ? `${selectedIndustries.length} selected — Click to add more...`
+                        : "Click to choose industries from taxonomy..."}
+                    </span>
+                    <span style={{ fontSize: "12px", color: "#666" }}>
+                      {industriesOpen ? "▲ Close" : "▼ Choose"}
+                    </span>
+                  </button>
+
+                  {industriesOpen ? (
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: "100%",
+                        left: 0,
+                        right: 0,
+                        background: "#fff",
+                        border: "1px solid #ccc",
+                        boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+                        maxHeight: "320px",
+                        overflowY: "auto",
+                        zIndex: 30,
+                        padding: "12px",
+                        borderRadius: "8px",
+                        marginTop: "4px",
+                      }}
+                    >
+                      <input
+                        type="text"
+                        placeholder="Search industries (e.g. Fintech, AI, SaaS, Payments)..."
+                        value={industrySearch}
+                        onChange={(e) => setIndustrySearch(e.target.value)}
+                        style={{
+                          width: "100%",
+                          padding: "8px 12px",
+                          fontSize: "13px",
+                          border: "1px solid #d1d5db",
+                          borderRadius: "4px",
+                          marginBottom: "10px",
+                          boxSizing: "border-box",
+                        }}
+                      />
+
+                      <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                        {filteredTaxonomy.map((parent) => (
+                          <div key={parent.name} style={{ borderBottom: "1px solid #f0f0ea", paddingBottom: "8px" }}>
+                            <label
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "8px",
+                                fontWeight: 600,
+                                fontSize: "14px",
+                                cursor: "pointer",
+                              }}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selectedIndustries.includes(parent.name)}
+                                onChange={() => toggleIndustry(parent.name)}
+                              />
+                              {parent.name}
+                            </label>
+                            {parent.subcategories && parent.subcategories.length > 0 ? (
+                              <div
+                                style={{
+                                  marginLeft: "24px",
+                                  marginTop: "6px",
+                                  display: "flex",
+                                  flexWrap: "wrap",
+                                  gap: "6px",
+                                }}
+                              >
+                                {parent.subcategories.map((sub) => {
+                                  const isSel = selectedIndustries.includes(sub);
+                                  return (
+                                    <button
+                                      key={sub}
+                                      type="button"
+                                      onClick={() => toggleIndustry(sub)}
+                                      style={{
+                                        background: isSel ? "#111" : "#f4f4f0",
+                                        color: isSel ? "#fff" : "#333",
+                                        border: `1px solid ${isSel ? "#111" : "#d8d8d0"}`,
+                                        borderRadius: "999px",
+                                        padding: "3px 10px",
+                                        fontSize: "12px",
+                                        cursor: "pointer",
+                                      }}
+                                    >
+                                      {isSel ? "✓ " : "+ "}
+                                      {sub}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            ) : null}
+                          </div>
+                        ))}
+                      </div>
+
+                      <div style={{ textAlign: "right", marginTop: "10px" }}>
+                        <button
+                          type="button"
+                          onClick={() => setIndustriesOpen(false)}
+                          className="ghost-btn"
+                          style={{ height: "30px", fontSize: "12px", padding: "0 12px" }}
+                        >
+                          Done selecting
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               </div>
 
               <div className="yc-grid-2">
                 <label className="yc-field-label">
-                  <span>Company LinkedIn</span>
+                  <span>Company LinkedIn (URL)</span>
                   <input
                     name="linkedin_url"
                     type="url"
                     value={linkedinUrl}
                     onChange={(e) => setLinkedinUrl(e.target.value)}
-                    placeholder="https://linkedin.com/company/..."
+                    placeholder="https://linkedin.com/company/acme"
+                    inputMode="url"
                   />
                 </label>
                 <label className="yc-field-label">
-                  <span>Company X / Twitter</span>
+                  <span>Company X / Twitter (URL)</span>
                   <input
                     name="twitter_url"
                     type="url"
                     value={twitterUrl}
                     onChange={(e) => setTwitterUrl(e.target.value)}
-                    placeholder="https://x.com/..."
+                    placeholder="https://x.com/acme"
+                    inputMode="url"
                   />
                 </label>
               </div>
@@ -538,10 +804,16 @@ export function AddStartupForm() {
           {/* STEP 2: FOUNDERS */}
           <div className={`yc-step-content ${currentStep === "founders" ? "is-visible" : "is-hidden"}`}>
             <h2 className="yc-section-title">Founders</h2>
+            <p className="yc-section-subtitle">
+              Founder name, title, and bio are compulsory for every listed founder.
+            </p>
 
             <div className="yc-founders-list">
               {founders.map((founder, index) => {
-                const isComplete = founder.name.trim().length > 0 && founder.title.trim().length > 0 && founder.bio.trim().length >= 10;
+                const isComplete =
+                  founder.name.trim().length >= 2 &&
+                  founder.title.trim().length >= 2 &&
+                  founder.bio.trim().length >= 10;
                 const isExpanded = expandedFounder === index;
 
                 return (
@@ -559,9 +831,13 @@ export function AddStartupForm() {
                             <svg viewBox="0 0 16 16" fill="currentColor" width="12" height="12">
                               <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z" />
                             </svg>
-                            Profile complete
+                            Complete
                           </span>
-                        ) : null}
+                        ) : (
+                          <span style={{ fontSize: "12px", color: "#dc2626" }}>
+                            Incomplete (name, title, bio required)
+                          </span>
+                        )}
                       </div>
                       <div className="yc-founder-actions">
                         <button
@@ -572,7 +848,7 @@ export function AddStartupForm() {
                             setExpandedFounder(isExpanded ? null : index);
                           }}
                         >
-                          {isExpanded ? "Close" : "Edit profile →"}
+                          {isExpanded ? "Close" : "Edit details →"}
                         </button>
                         {founders.length > 1 ? (
                           <button
@@ -597,6 +873,7 @@ export function AddStartupForm() {
                           <span>Founder Name <strong className="req">*</strong></span>
                           <input
                             name={`founder_name_${index}`}
+                            required
                             value={founder.name}
                             onChange={(e) =>
                               setFounders(updateAt(founders, index, { name: e.target.value }))
@@ -609,7 +886,8 @@ export function AddStartupForm() {
                           <span>Title / Role <strong className="req">*</strong></span>
                           <input
                             name={`founder_title_${index}`}
-                            placeholder="Founder / CEO"
+                            required
+                            placeholder="Co-founder & CEO"
                             value={founder.title}
                             onChange={(e) =>
                               setFounders(updateAt(founders, index, { title: e.target.value }))
@@ -618,26 +896,50 @@ export function AddStartupForm() {
                         </label>
 
                         <label className="yc-field-label">
-                          <span>Bio & Background <strong className="req">*</strong></span>
+                          <span>Bio & Background <strong className="req">*</strong> (min 10 characters)</span>
                           <textarea
                             name={`founder_bio_${index}`}
+                            required
+                            minLength={10}
                             rows={3}
-                            placeholder="Brief summary of background, previous startups, or school"
+                            placeholder="Brief summary of background, previous experience, or domain expertise"
                             value={founder.bio}
                             onChange={(e) =>
                               setFounders(updateAt(founders, index, { bio: e.target.value }))
                             }
                           />
+                          <span className="char-count">{founder.bio.length} characters (min 10)</span>
                         </label>
 
                         <label className="yc-field-label">
-                          <span>Founder Photo</span>
-                          <input name={`founder_photo_${index}`} type="file" accept="image/*" />
+                          <span>Founder Photo (optional)</span>
+                          <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "4px" }}>
+                            {founder.photoPreview ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={founder.photoPreview}
+                                alt="Founder"
+                                style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover" }}
+                              />
+                            ) : null}
+                            <input
+                              name={`founder_photo_${index}`}
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  const url = URL.createObjectURL(file);
+                                  setFounders(updateAt(founders, index, { photoPreview: url }));
+                                }
+                              }}
+                            />
+                          </div>
                         </label>
 
                         <div className="yc-grid-2">
                           <label className="yc-field-label">
-                            <span>X / Twitter</span>
+                            <span>X / Twitter (URL)</span>
                             <input
                               name={`founder_twitter_${index}`}
                               type="url"
@@ -649,7 +951,7 @@ export function AddStartupForm() {
                             />
                           </label>
                           <label className="yc-field-label">
-                            <span>LinkedIn</span>
+                            <span>LinkedIn (URL)</span>
                             <input
                               name={`founder_linkedin_${index}`}
                               type="url"
@@ -677,7 +979,7 @@ export function AddStartupForm() {
                     setExpandedFounder(next.length - 1);
                   }}
                 >
-                  + Add a co-founder
+                  + Add another founder
                 </button>
               ) : null}
             </div>
@@ -687,7 +989,7 @@ export function AddStartupForm() {
           <div className={`yc-step-content ${currentStep === "jobs" ? "is-visible" : "is-hidden"}`}>
             <h2 className="yc-section-title">Hiring & Open Roles (Optional)</h2>
             <p className="yc-section-subtitle">
-              Open roles will appear on your profile card and the WhyAlligator Jobs Board.
+              Open roles appear on your company profile and on the WhyAlligator Jobs Board.
             </p>
 
             <div className="yc-jobs-list">
@@ -704,9 +1006,10 @@ export function AddStartupForm() {
                     </button>
                   </div>
                   <label className="yc-field-label">
-                    <span>Job Title</span>
+                    <span>Job Title <strong className="req">*</strong></span>
                     <input
                       name={`job_title_${index}`}
+                      required
                       value={job.title}
                       placeholder="Founding Full-Stack Engineer"
                       onChange={(e) => setJobs(updateAt(jobs, index, { title: e.target.value }))}
@@ -714,9 +1017,10 @@ export function AddStartupForm() {
                   </label>
                   <div className="yc-grid-2">
                     <label className="yc-field-label">
-                      <span>Location</span>
+                      <span>Location <strong className="req">*</strong></span>
                       <input
                         name={`job_location_${index}`}
+                        required
                         placeholder="San Francisco or Remote"
                         value={job.location}
                         onChange={(e) => setJobs(updateAt(jobs, index, { location: e.target.value }))}
@@ -738,6 +1042,7 @@ export function AddStartupForm() {
                       <span>Equity</span>
                       <input
                         name={`job_equity_${index}`}
+                        type="text"
                         placeholder="0.5% - 2.0%"
                         value={job.equity}
                         onChange={(e) => setJobs(updateAt(jobs, index, { equity: e.target.value }))}
@@ -755,10 +1060,11 @@ export function AddStartupForm() {
                     </label>
                   </div>
                   <label className="yc-field-label">
-                    <span>Apply URL</span>
+                    <span>Apply URL <strong className="req">*</strong></span>
                     <input
                       name={`job_apply_url_${index}`}
                       type="url"
+                      required
                       placeholder="https://example.com/careers"
                       value={job.apply_url}
                       onChange={(e) => setJobs(updateAt(jobs, index, { apply_url: e.target.value }))}
@@ -773,7 +1079,7 @@ export function AddStartupForm() {
                   className="yc-add-btn"
                   onClick={() => setJobs([...jobs, emptyJob()])}
                 >
-                  + Add a job role
+                  + Add an open role
                 </button>
               ) : null}
             </div>
@@ -783,25 +1089,83 @@ export function AddStartupForm() {
           <div className={`yc-step-content ${currentStep === "submit" ? "is-visible" : "is-hidden"}`}>
             <h2 className="yc-section-title">Review & Submit</h2>
             <p className="yc-section-subtitle">
-              Your company listing will go live immediately on WhyAlligator once payment of $20 clears.
+              Here is how your startup will appear on WhyAlligator once payment clears ($20 flat, one-time).
             </p>
 
-            <div className="yc-review-box">
-              <h3 className="yc-review-title">Application Summary</h3>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
-                {logoPreview ? (
-                  <img src={logoPreview} alt="Logo preview" style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 8 }} />
-                ) : (
-                  <div style={{ width: 64, height: 64, background: '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, fontWeight: 'bold', borderRadius: 8 }}>
-                    {companyName ? companyName.charAt(0).toUpperCase() : "?"}
+            {/* LIVE CARD PREVIEW */}
+            <div style={{ marginBottom: "24px" }}>
+              <h3 style={{ fontSize: "15px", textTransform: "uppercase", letterSpacing: "0.08em", color: "#666", margin: "0 0 10px" }}>
+                Directory Card Preview
+              </h3>
+              <div
+                className="company-row"
+                style={{
+                  background: "#fff",
+                  border: "1px solid #d4d4cd",
+                  borderRadius: "8px",
+                  padding: "16px",
+                  pointerEvents: "none",
+                }}
+              >
+                <div className="company-logo-wrap" style={{ width: 64, flexBasis: 64, padding: 0 }}>
+                  {logoPreview ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={logoPreview}
+                      alt="Preview logo"
+                      className="company-logo"
+                      style={{ width: 64, height: 64, objectFit: "cover", borderRadius: "10px" }}
+                    />
+                  ) : (
+                    <div
+                      className="company-logo fallback"
+                      style={{
+                        width: 64,
+                        height: 64,
+                        borderRadius: "10px",
+                        fontSize: "24px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      {companyName ? companyName.charAt(0).toUpperCase() : "?"}
+                    </div>
+                  )}
+                </div>
+                <div className="company-copy" style={{ minWidth: 0, flex: 1, paddingLeft: "16px" }}>
+                  <div className="company-titleline" style={{ display: "flex", alignItems: "baseline", gap: "10px", flexWrap: "wrap" }}>
+                    <span className="company-name" style={{ fontSize: "18px", fontWeight: 600 }}>
+                      {companyName || "Your Company Name"}
+                    </span>
+                    {location ? (
+                      <span className="company-location" style={{ fontSize: "14px", color: "#666" }}>
+                        {location}
+                      </span>
+                    ) : null}
                   </div>
-                )}
-                <div>
-                  <h4 style={{ margin: 0, fontSize: '18px' }}>{companyName || "Not provided"}</h4>
-                  <p style={{ margin: '4px 0 0', color: '#666' }}>{pitch || "Not provided"}</p>
+                  <p className="company-pitch" style={{ margin: "4px 0 10px", color: "#333", fontSize: "14px" }}>
+                    {pitch || "Your one-line pitch will appear here."}
+                  </p>
+                  <div className="pill-row" style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                    <span className="pill pill-batch">Auto-Calculated Batch</span>
+                    <span className="pill pill-active"><i /> {activityStatus}</span>
+                    {selectedIndustries.slice(0, 4).map((tag) => (
+                      <span className="pill" key={tag}>{tag}</span>
+                    ))}
+                    {jobs.length > 0 ? (
+                      <span className="pill" style={{ background: "#dcfce7", color: "#15803d" }}>
+                        {jobs.length} hiring
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
               </div>
+            </div>
 
+            {/* DETAILED SUMMARY */}
+            <div className="yc-review-box">
+              <h3 className="yc-review-title">Application Summary</h3>
               <div className="yc-review-row">
                 <span className="yc-review-label">Website:</span>
                 <span>{websiteUrl || "Not provided"}</span>
@@ -819,31 +1183,38 @@ export function AddStartupForm() {
                 <span>{teamSize || "Not provided"}</span>
               </div>
               <div className="yc-review-row">
+                <span className="yc-review-label">HQ Region:</span>
+                <span>{hqRegion}</span>
+              </div>
+              <div className="yc-review-row">
                 <span className="yc-review-label">Industries:</span>
-                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                  {selectedIndustries.length > 0 ? selectedIndustries.map(ind => (
-                    <span key={ind} style={{ background: '#eef', padding: '2px 6px', borderRadius: '4px', fontSize: '12px' }}>{ind}</span>
-                  )) : "None"}
+                <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
+                  {selectedIndustries.map((ind) => (
+                    <span key={ind} style={{ background: "#eee", padding: "2px 8px", borderRadius: "4px", fontSize: "12px" }}>
+                      {ind}
+                    </span>
+                  ))}
                 </div>
               </div>
               <div className="yc-review-row">
                 <span className="yc-review-label">Founders:</span>
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  {founders.filter(f => f.name.trim()).length > 0 
-                    ? founders.filter(f => f.name.trim()).map((f, i) => (
-                        <span key={i}>{f.name} {f.title ? `— ${f.title}` : ""}</span>
-                      ))
-                    : "Not provided"}
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  {founders.filter((f) => f.name.trim()).map((f, i) => (
+                    <span key={i}>
+                      <strong>{f.name}</strong> — {f.title}
+                    </span>
+                  ))}
                 </div>
               </div>
               {jobs.length > 0 ? (
                 <div className="yc-review-row">
-                  <span className="yc-review-label">Jobs:</span>
-                  <span>{jobs.length} listed</span>
+                  <span className="yc-review-label">Open Roles:</span>
+                  <span>{jobs.length} listed ({jobs.map((j) => j.title).join(", ")})</span>
                 </div>
               ) : null}
             </div>
 
+            {/* EMAIL AND TERMS */}
             <div className="yc-form-block" style={{ marginTop: 24 }}>
               <label className="yc-field-label">
                 <span>Founder Email (for listing management & receipt) <strong className="req">*</strong></span>
@@ -857,7 +1228,7 @@ export function AddStartupForm() {
                   autoComplete="email"
                 />
                 <span className="yc-input-hint">
-                  You can use this email to log in and edit your startup listing anytime.
+                  You can use this email to log in and manage your startup anytime.
                 </span>
               </label>
 
@@ -885,7 +1256,7 @@ export function AddStartupForm() {
               </div>
 
               <p className="yc-fineprint">
-                Flat $20, one time. No recurring charges. Your startup page goes live as soon as Stripe clears. Newest first, no ranking.
+                Flat $20, one time. No recurring charges. Your startup page goes live immediately once payment clears. Newest first, no ranking.
               </p>
             </div>
           </div>
@@ -908,16 +1279,6 @@ export function AddStartupForm() {
           </div>
 
           <div className="yc-bottom-right">
-            <button
-              type="button"
-              className="yc-save-btn"
-              onClick={() => {
-                alert("Draft saved locally.");
-              }}
-            >
-              Save changes
-            </button>
-
             {currentStep !== "submit" ? (
               <button
                 type="button"
@@ -932,7 +1293,7 @@ export function AddStartupForm() {
                 className="yc-submit-btn"
                 disabled={pending || !agreedToTerms}
               >
-                {pending ? "Preparing checkout…" : "Submit application"}
+                {pending ? "Preparing checkout…" : "Submit & Pay $20"}
               </button>
             )}
           </div>
