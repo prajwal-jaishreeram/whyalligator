@@ -595,96 +595,84 @@ export function DirectoryClient({ companies }: { companies: Company[] }) {
             : `Showing ${filtered.length} of ${companies.length} companies`}
         </p>
         <div className="results-box">
-          {companies.length === 0 ? (
-            <div className="placeholder-spots-wrap" style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  padding: "12px 16px",
-                  background: "#fffbeb",
-                  border: "1px dashed #f59e0b",
-                  borderRadius: "8px",
-                  marginBottom: "4px",
-                  gap: "12px",
-                  flexWrap: "wrap",
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ fontSize: "18px" }}>🐊</span>
-                  <span style={{ fontSize: "14px", fontWeight: 600, color: "#92400e" }}>
-                    Batch 1 is live — Claim a top rank spot and showcase your product!
-                  </span>
-                </div>
-                <Link
-                  href="/add"
-                  style={{
-                    fontSize: "13px",
-                    fontWeight: 700,
-                    background: "#111827",
-                    color: "#ffffff",
-                    padding: "6px 14px",
-                    borderRadius: "6px",
-                    textDecoration: "none",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  Add Your Startup ($20) →
-                </Link>
-              </div>
+          {filtered.length === 0 && (query || batches.length > 0 || industries.length > 0 || regions.length > 0 || hiringOnly || nonprofitOnly || topCompaniesOnly) ? (
+            <div className="empty-state">
+              No companies match those filters.{" "}
+              <button type="button" className="clear-all-filters" onClick={clearAll}>
+                Clear all filters
+              </button>
+            </div>
+          ) : (
+            <>
+              {filtered.map((company) => {
+                const rank = globalRankMap.get(company.id);
 
-              {PLACEHOLDER_CLAIM_SPOTS.map((slot) => (
-                <Link
-                  key={slot.spot}
-                  href="/add"
-                  className="company-row is-placeholder-row"
-                  style={{
-                    cursor: "pointer",
-                    borderStyle: "dashed",
-                    borderColor: "#d1d5db",
-                    background: "#fafaf8",
-                    transition: "all 0.15s ease",
-                    textDecoration: "none",
-                  }}
-                  title="Click to claim this spot and add your startup"
-                >
-                  <div className="company-corner-badge">
-                    <span className={slot.badgeClass} style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                      <span>{slot.badgeLabel}</span>
-                    </span>
-                  </div>
+                return (
+                  <CompanyCard
+                    key={company.id}
+                    company={company}
+                    highlighted={highlightId === company.id}
+                    rank={rank}
+                    onUpvoteClick={(c) => setUpvoteModalCompany(c)}
+                    hasUpvoted={userUpvoteIds.has(company.id)}
+                    isOwnCompany={isOwnCompany(company)}
+                  />
+                );
+              })}
 
-                  <div className="company-logo-wrap">
-                    <div
-                      className="company-logo"
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        background: "#ffffff",
-                        border: "1.5px dashed #9ca3af",
-                        color: "#6b7280",
-                        fontSize: "13px",
-                        fontWeight: 700,
-                        letterSpacing: "0.5px",
-                        textTransform: "uppercase",
-                      }}
-                    >
-                      Logo
-                    </div>
-                  </div>
-
-                  <div className="company-copy">
-                    <div className="company-titleline">
-                      <span className="company-name" style={{ color: "#111827", display: "inline-flex", alignItems: "center", gap: "6px" }}>
-                        {slot.name}
-                        <span style={{ fontSize: "12px", fontWeight: 500, color: "#ea580c" }}>
-                          (Available)
-                        </span>
+              {/* Render claimable spots below to fill down to filter height */}
+              {(!query && batches.length === 0 && industries.length === 0 && regions.length === 0 && !hiringOnly && !nonprofitOnly && !topCompaniesOnly && filtered.length < 4) ? (
+                PLACEHOLDER_CLAIM_SPOTS.slice(filtered.length, 4).map((slot) => (
+                  <Link
+                    key={slot.spot}
+                    href="/add"
+                    className="company-row is-placeholder-row"
+                    style={{
+                      cursor: "pointer",
+                      borderStyle: "dashed",
+                      borderColor: "#d1d5db",
+                      background: "#fafaf8",
+                      transition: "all 0.15s ease",
+                      textDecoration: "none",
+                    }}
+                    title="Click to claim this spot and add your startup"
+                  >
+                    <div className="company-corner-badge">
+                      <span className={slot.badgeClass} style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                        <span>{slot.badgeLabel}</span>
                       </span>
-                      <span className="company-location" style={{ color: "#64748b" }}>{slot.location}</span>
                     </div>
+
+                    <div className="company-logo-wrap">
+                      <div
+                        className="company-logo"
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          background: "#ffffff",
+                          border: "1.5px dashed #9ca3af",
+                          color: "#6b7280",
+                          fontSize: "13px",
+                          fontWeight: 700,
+                          letterSpacing: "0.5px",
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        Logo
+                      </div>
+                    </div>
+
+                    <div className="company-copy">
+                      <div className="company-titleline">
+                        <span className="company-name" style={{ color: "#111827", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                          {slot.name}
+                          <span style={{ fontSize: "12px", fontWeight: 500, color: "#ea580c" }}>
+                            (Available)
+                          </span>
+                        </span>
+                        <span className="company-location" style={{ color: "#64748b" }}>{slot.location}</span>
+                      </div>
 
                     <p className="company-pitch" style={{ color: "#4b5563" }}>
                       {slot.pitch}
@@ -728,33 +716,11 @@ export function DirectoryClient({ companies }: { companies: Company[] }) {
                     </div>
                   </div>
                 </Link>
-              ))}
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="empty-state">
-              No companies match those filters.{" "}
-              <button type="button" className="clear-all-filters" onClick={clearAll}>
-                Clear all filters
-              </button>
-            </div>
-          ) : (
-            filtered.map((company) => {
-              const rank = globalRankMap.get(company.id);
-
-              return (
-                <CompanyCard
-                  key={company.id}
-                  company={company}
-                  highlighted={highlightId === company.id}
-                  rank={rank}
-                  onUpvoteClick={(c) => setUpvoteModalCompany(c)}
-                  hasUpvoted={userUpvoteIds.has(company.id)}
-                  isOwnCompany={isOwnCompany(company)}
-                />
-              );
-            })
-          )}
-        </div>
+              ))
+            ) : null}
+          </>
+        )}
+      </div>
       </section>
 
       {upvoteModalCompany && (
