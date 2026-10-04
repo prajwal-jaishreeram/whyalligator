@@ -34,9 +34,5 @@
     "eslint-config-next": "^15.5.24",
     "typescript": "^5",
     "wrangler": "^4.147.0"
-  },
-  "optionalDependencies": {
-    "@emnapi/core": "1.11.3",
-    "@emnapi/runtime": "1.11.3"
   }
 }
