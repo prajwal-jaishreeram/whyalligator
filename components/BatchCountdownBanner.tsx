@@ -82,58 +82,14 @@ export function BatchCountdownBanner({
   const targetCount = data?.target_count ?? 3000;
   const progressPercent = Math.min(100, Math.round((totalListings / targetCount) * 100));
 
+  // Do not show the banner while the batch is still filling up (< 3,000 listings).
+  // Only display the banner when the 8-hour countdown is triggered or the winner is finalized.
+  if (activeStatus === "open") {
+    return null;
+  }
+
   return (
     <section className="batch-milestone-container" aria-label="Batch 1 Milestone and Funding Countdown">
-      {/* STATE 1: BATCH 1 OPEN & FILLING */}
-      {activeStatus === "open" && (
-        <div className="milestone-card milestone-open">
-          <div className="milestone-header">
-            <div className="milestone-badge-row">
-              <span className="pill pill-batch">Batch 1</span>
-              <span className="pill pill-gold" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                <span>💰</span>
-                <span>$30,000 Equity-Free Milestone Grant</span>
-              </span>
-              <span className="pill" style={{ background: "#f0fdf4", color: "#166534", border: "1px solid #bbf7d0" }}>
-                3,000 Spots Total
-              </span>
-            </div>
-            <div className="milestone-title-wrap">
-              <h3 className="milestone-title">Batch 1 Milestone & Founder Discovery</h3>
-              <p className="milestone-desc">
-                List your startup to gain valuable dofollow backlinks, reach early customers, and connect with angel investors. Once Batch 1 reaches <strong>3,000 listed startups</strong>, an 8-hour community countdown begins and the top-voted startup receives <strong>$30,000 in equity-free funding</strong>.
-              </p>
-            </div>
-          </div>
-
-          <div className="milestone-progress-section">
-            <div className="progress-labels">
-              <span>
-                <strong>{totalListings.toLocaleString()}</strong> of {targetCount.toLocaleString()} startups listed
-              </span>
-              <span className="spots-left">
-                <strong>{(targetCount - totalListings).toLocaleString()}</strong> spots remaining
-              </span>
-            </div>
-            <div className="progress-bar-track">
-              <div
-                className="progress-bar-fill"
-                style={{ width: `${Math.max(1, progressPercent)}%` }}
-              />
-            </div>
-          </div>
-
-          <div className="milestone-footer-action">
-            <span className="milestone-note">
-              Every upvote counts toward community ranking. Upvotes remain active and carry directly into the countdown.
-            </span>
-            <Link href="/add" className="apply-btn" style={{ height: "36px", padding: "0 18px", fontSize: "13px" }}>
-              List your startup in Batch 1 →
-            </Link>
-          </div>
-        </div>
-      )}
-
       {/* STATE 2: 8-HOUR COUNTDOWN ACTIVE */}
       {activeStatus === "countdown" && (
         <div className="milestone-card milestone-countdown">
