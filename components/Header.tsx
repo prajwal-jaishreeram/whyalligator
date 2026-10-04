@@ -89,54 +89,11 @@ function NotificationTypeIcon({ type }: { type: string }) {
   );
 }
 
-const DUMMY_NOTIFICATIONS: UserNotification[] = [
-  {
-    id: "dummy-1",
-    user_id: "demo",
-    type: "top_3",
-    title: "🏆 Top 1 Startup!",
-    message: "eginta reached Rank #1 on WhyAlligator! Keep it up!",
-    link: "/companies/eginta",
-    is_read: false,
-    created_at: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "dummy-2",
-    user_id: "demo",
-    type: "upvote",
-    title: "▲ New Upvote Received",
-    message: "A founder just upvoted your startup 'eginta'.",
-    link: "/companies/eginta",
-    is_read: false,
-    created_at: new Date(Date.now() - 25 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "dummy-3",
-    user_id: "demo",
-    type: "new_comment",
-    title: "💬 New Comment on eginta",
-    message: "Prajwal commented: 'Great product, love the clean UI and vision!'",
-    link: "/companies/eginta#comments",
-    is_read: false,
-    created_at: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
-  },
-  {
-    id: "dummy-4",
-    user_id: "demo",
-    type: "milestone_100",
-    title: "🎉 25 Upvotes Milestone",
-    message: "eginta reached 25 upvotes. Your startup is gaining serious momentum!",
-    link: "/companies/eginta",
-    is_read: true,
-    created_at: new Date(Date.now() - 24 * 3600 * 1000).toISOString(),
-  },
-];
-
 export function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [unreadCount, setUnreadCount] = useState<number>(3);
-  const [notifications, setNotifications] = useState<UserNotification[]>(DUMMY_NOTIFICATIONS);
+  const [unreadCount, setUnreadCount] = useState<number>(0);
+  const [notifications, setNotifications] = useState<UserNotification[]>([]);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const notifBtnRef = useRef<HTMLButtonElement>(null);
   const mobileNotifBtnRef = useRef<HTMLButtonElement>(null);
@@ -164,7 +121,7 @@ export function Header() {
     })
       .then((r) => r.json())
       .then((res) => {
-        if (Array.isArray(res.notifications) && res.notifications.length > 0) {
+        if (Array.isArray(res.notifications)) {
           setNotifications(res.notifications);
           if (typeof res.unread_count === "number") {
             setUnreadCount(res.unread_count);
@@ -192,8 +149,8 @@ export function Header() {
         if (token) {
           refreshNotifications(token);
         } else {
-          setUnreadCount(3);
-          setNotifications(DUMMY_NOTIFICATIONS);
+          setUnreadCount(0);
+          setNotifications([]);
         }
       });
 
@@ -247,7 +204,7 @@ export function Header() {
       );
       setUnreadCount((prev) => Math.max(0, prev - 1));
 
-      if (!n.id.startsWith("dummy-") && hasSupabaseConfig()) {
+      if (hasSupabaseConfig()) {
         try {
           const supabase = createBrowserClient();
           const { data } = await supabase.auth.getSession();
