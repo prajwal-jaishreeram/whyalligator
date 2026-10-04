@@ -186,6 +186,18 @@ export default function DashboardPage() {
 
   useEffect(() => {
     loadData();
+
+    if (hasSupabaseConfig()) {
+      const supabase = createBrowserClient();
+      const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+        if (session?.user) {
+          loadData();
+        }
+      });
+      return () => {
+        authListener.subscription.unsubscribe();
+      };
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -195,110 +207,110 @@ export default function DashboardPage() {
       return;
     }
     const supabase = createBrowserClient();
-    // Validate user against Supabase auth server to prevent stale browser localStorage
-    const { data: userData, error: userError } = await supabase.auth.getUser();
-    const user = userData?.user;
-    if (userError || !user) {
-      await supabase.auth.signOut().catch(() => {});
-      if (typeof window !== "undefined") {
-        try {
-          localStorage.clear();
-          sessionStorage.clear();
-        } catch {}
-      }
-      window.location.href = "/login";
-      return;
+    const { data: authData } = await supabase.auth.getSession();
+    const session = authData.session;
+    const user = session?.user;
+    if (!user) {
+      // Allow 1.5 seconds for OAuth PKCE token exchange to settle if navigating from OAuth callback
+      const timer = setTimeout(async () => {
+        const { data: retryAuth } = await supabase.auth.getSession();
+        if (!retryAuth.session?.user) {
+          window.location.href = "/login";
+        } else {
+          loadData();
+        }
+      }, 1500);
+      return () => clearTimeout(timer);
     }
-    setUserEmail(user.email ?? null);
 
+    setUserEmail(user.email ?? null);
     const metaName = user.user_metadata?.full_name || user.user_metadata?.name || "";
-    if (metaName) {
-      setNameInput(metaName);
+    if (metaName) setNameInput(metaName);
+
+    // Initial role and username from cached metadata so dashboard renders immediately
+    const metaUsername = (user.user_metadata?.username as string) || "";
+    if (metaUsername) {
+      setUsername(metaUsername);
+      setUsernameInput(metaUsername);
     }
+    const metaRole = (user.user_metadata?.role as "founder" | "user") || "user";
+    setUserRole(metaRole);
+    setDisplayName(metaName || user.email?.split("@")[0] || "User");
+    setLoading(false); // Render dashboard immediately with zero perceived lag!
 
     const userEmailClean = (user.email ?? "").trim().toLowerCase();
+    const token = session.access_token;
 
-    // Match by user_id OR primary email OR partner_emails
-    const { data, error } = await supabase
-      .from("companies")
-      .select(
-        "id, slug, company_name, pitch, batch, location, logo_url, email, status, user_id, created_at, description, website_url, founded_year, team_size, activity_status, industries, linkedin_url, twitter_url, primary_partner, founders, jobs, hq_region, is_nonprofit, is_top_company, partner_emails, upvotes_count"
-      )
-      .or(`user_id.eq.${user.id},email.ilike.${user.email},partner_emails.cs.{"${userEmailClean}"}`)
-      .order("created_at", { ascending: false });
+    // Run data queries in parallel in the background
+    Promise.allSettled([
+      // 1. User's companies
+      supabase
+        .from("companies")
+        .select(
+          "id, slug, company_name, pitch, batch, location, logo_url, email, status, user_id, created_at, description, website_url, founded_year, team_size, activity_status, industries, linkedin_url, twitter_url, primary_partner, founders, jobs, hq_region, is_nonprofit, is_top_company, partner_emails, upvotes_count"
+        )
+        .or(`user_id.eq.${user.id},email.ilike.${user.email},partner_emails.cs.{"${userEmailClean}"}`)
+        .order("created_at", { ascending: false }),
 
-    let compList: Company[] = [];
-    if (!error && data) {
-      compList = data as Company[];
-      setCompanies(compList);
-    }
+      // 2. User profile (username, role)
+      supabase
+        .from("user_profiles")
+        .select("username, role")
+        .eq("id", user.id)
+        .maybeSingle(),
 
-    const computed = computeDisplayName(user.email ?? null, metaName, compList);
-    setDisplayName(computed);
-    if (!metaName && computed) {
-      setNameInput(computed);
-    }
+      // 3. User upvotes
+      token
+        ? fetch("/api/user/upvotes", { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.json())
+        : Promise.resolve(null),
 
-    // Fetch user username & role from user_profiles
-    const { data: profData } = await supabase
-      .from("user_profiles")
-      .select("username, role")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    const existingUsername = profData?.username || (user.user_metadata?.username as string) || "";
-    if (existingUsername) {
-      setUsername(existingUsername);
-      setUsernameInput(existingUsername);
-    }
-
-    // Role detection: prioritize user_profiles.role, then auth metadata, then existing company list
-    const resolvedRole =
-      (profData?.role as "founder" | "user") ||
-      (user.user_metadata?.role as "founder" | "user") ||
-      (compList.length > 0 ? "founder" : "user");
-    setUserRole(resolvedRole);
-
-    // Check query params for tab (e.g. ?tab=notifications)
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const tabParam = params.get("tab") as DashboardTab | null;
-      if (tabParam && ["startups", "jobs", "upvoted", "notifications", "settings"].includes(tabParam)) {
-        setActiveTab(tabParam);
-      } else {
-        // Community Member defaults to Upvoted tab; Founder defaults to Startups tab
-        setActiveTab(resolvedRole === "user" ? "upvoted" : "startups");
+      // 4. Notifications
+      token
+        ? fetch("/api/notifications", { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.json())
+        : Promise.resolve(null),
+    ]).then(([compRes, profRes, upvotesRes, notifRes]) => {
+      let compList: Company[] = [];
+      if (compRes.status === "fulfilled" && compRes.value.data) {
+        compList = compRes.value.data as Company[];
+        setCompanies(compList);
       }
-    }
 
-    // Fetch user's upvoted startups & notifications
-    const { data: authSessionData } = await supabase.auth.getSession();
-    if (authSessionData.session?.access_token) {
-      fetch("/api/user/upvotes", {
-        headers: { Authorization: `Bearer ${authSessionData.session.access_token}` },
-      })
-        .then((r) => r.json())
-        .then((d) => {
-          if (Array.isArray(d.upvoted_companies)) {
-            setUpvotedCompanies(d.upvoted_companies);
-          }
-        })
-        .catch(() => {});
+      const computed = computeDisplayName(user.email ?? null, metaName, compList);
+      setDisplayName(computed);
+      if (!metaName && computed) setNameInput(computed);
 
-      fetch("/api/notifications", {
-        headers: { Authorization: `Bearer ${authData.session.access_token}` },
-      })
-        .then((r) => r.json())
-        .then((d) => {
-          if (Array.isArray(d.notifications)) {
-            setNotifications(d.notifications);
-            setUnreadCount(typeof d.unread_count === "number" ? d.unread_count : 0);
-          }
-        })
-        .catch(() => {});
-    }
+      let profRole: "founder" | "user" | null = null;
+      if (profRes.status === "fulfilled" && profRes.value.data) {
+        const p = profRes.value.data;
+        if (p.username) {
+          setUsername(p.username);
+          setUsernameInput(p.username);
+        }
+        if (p.role) profRole = p.role as "founder" | "user";
+      }
 
-    setLoading(false);
+      const resolvedRole = profRole || metaRole || (compList.length > 0 ? "founder" : "user");
+      setUserRole(resolvedRole);
+
+      if (typeof window !== "undefined") {
+        const params = new URLSearchParams(window.location.search);
+        const tabParam = params.get("tab") as DashboardTab | null;
+        if (tabParam && ["startups", "jobs", "upvoted", "notifications", "settings"].includes(tabParam)) {
+          setActiveTab(tabParam);
+        } else {
+          setActiveTab(resolvedRole === "user" ? "upvoted" : "startups");
+        }
+      }
+
+      if (upvotesRes.status === "fulfilled" && upvotesRes.value && Array.isArray(upvotesRes.value.upvoted_companies)) {
+        setUpvotedCompanies(upvotesRes.value.upvoted_companies);
+      }
+
+      if (notifRes.status === "fulfilled" && notifRes.value && Array.isArray(notifRes.value.notifications)) {
+        setNotifications(notifRes.value.notifications);
+        setUnreadCount(typeof notifRes.value.unread_count === "number" ? notifRes.value.unread_count : 0);
+      }
+    });
   }
 
   function startQuickEdit(company: Company) {
