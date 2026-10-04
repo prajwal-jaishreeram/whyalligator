@@ -40,7 +40,22 @@ function PasswordRequirement({
   );
 }
 
-const DRAFT_STORAGE_KEY = "whyalligator_listing_draft_v1";
+const DRAFT_STORAGE_KEY = "whyalligator_listing_draft_v2";
+const LEGACY_DRAFT_KEY = "whyalligator_listing_draft_v1";
+
+function isMeaningfulDraft(data: any): boolean {
+  if (!data || typeof data !== "object") return false;
+  const name = typeof data.companyName === "string" ? data.companyName.trim() : "";
+  const pitch = typeof data.pitch === "string" ? data.pitch.trim() : "";
+  const description = typeof data.description === "string" ? data.description.trim() : "";
+  const website = typeof data.websiteUrl === "string" ? data.websiteUrl.trim() : "";
+  const hasFounders =
+    Array.isArray(data.founders) &&
+    data.founders.some((f: any) => typeof f?.name === "string" && f.name.trim().length >= 2);
+
+  // A draft is only meaningful if it has a real company name AND at least one other substantial field
+  return name.length >= 2 && (pitch.length >= 5 || description.length >= 10 || website.length >= 4 || hasFounders);
+}
 
 function dataUrlToFile(dataUrl: string, filename: string): File | null {
   try {
@@ -267,80 +282,122 @@ export function AddStartupForm() {
     };
   }, []);
 
-  // Restore draft from localStorage on initial mount
+  const draftRestoredRef = useRef(false);
+
+  // 1. Proactively clear legacy v1 drafts and restore v2 draft on initial mount ONLY
   useEffect(() => {
+    // Purge legacy draft key so stale test data is never restored
+    try {
+      localStorage.removeItem(LEGACY_DRAFT_KEY);
+    } catch {}
+
+    try {
+      const saved = localStorage.getItem(DRAFT_STORAGE_KEY);
+      if (!saved) {
+        draftRestoredRef.current = true;
+        return;
+      }
+      const parsed = JSON.parse(saved);
+
+      // Verify draft has actual meaningful user content (company name + substantial details)
+      if (!isMeaningfulDraft(parsed)) {
+        try {
+          localStorage.removeItem(DRAFT_STORAGE_KEY);
+        } catch {}
+        setRestoredNotice(false);
+        draftRestoredRef.current = true;
+        return;
+      }
+
+      // Expire drafts older than 7 days
+      if (parsed.savedAt && Date.now() - parsed.savedAt > 7 * 24 * 60 * 60 * 1000) {
+        try {
+          localStorage.removeItem(DRAFT_STORAGE_KEY);
+        } catch {}
+        setRestoredNotice(false);
+        draftRestoredRef.current = true;
+        return;
+      }
+
+      if (parsed.companyName) setCompanyName(parsed.companyName);
+      if (parsed.pitch) setPitch(parsed.pitch);
+      if (parsed.description) setDescription(parsed.description);
+      if (parsed.websiteUrl) setWebsiteUrl(parsed.websiteUrl);
+      if (parsed.country) setCountry(parsed.country);
+      if (parsed.address) setAddress(parsed.address);
+      if (parsed.location) {
+        setLocation(parsed.location);
+        if (!parsed.country) {
+          const detected = parseLocation(parsed.location);
+          if (detected.country) setCountry(detected.country);
+          if (detected.address) setAddress(detected.address);
+        }
+      }
+      if (parsed.foundedYear) setFoundedYear(String(parsed.foundedYear).slice(0, 4));
+      if (parsed.teamSize) setTeamSize(String(parsed.teamSize));
+      if (parsed.hqRegion) setHqRegion(parsed.hqRegion);
+      if (parsed.activityStatus) setActivityStatus(parsed.activityStatus);
+      if (Array.isArray(parsed.selectedIndustries)) setSelectedIndustries(parsed.selectedIndustries);
+      if (parsed.linkedinUrl) setLinkedinUrl(parsed.linkedinUrl);
+      if (parsed.twitterUrl) setTwitterUrl(parsed.twitterUrl);
+      if (Array.isArray(parsed.extraLinks)) setExtraLinks(parsed.extraLinks);
+      if (typeof parsed.isNonprofit === "boolean") setIsNonprofit(parsed.isNonprofit);
+      if (Array.isArray(parsed.founders) && parsed.founders.length > 0) setFounders(parsed.founders);
+      if (Array.isArray(parsed.jobs)) setJobs(parsed.jobs);
+      if (parsed.email && !loggedInUser) setEmail(parsed.email);
+      if (parsed.partnerEmails) setPartnerEmails(parsed.partnerEmails);
+      if (parsed.agreedToTerms) setAgreedToTerms(parsed.agreedToTerms);
+      if (parsed.logoPreview) setLogoPreview(parsed.logoPreview);
+
+      // Only show banner if substantial meaningful data was restored
+      setRestoredNotice(true);
+      draftRestoredRef.current = true;
+    } catch (err) {
+      console.error("Failed to restore draft:", err);
+      draftRestoredRef.current = true;
+    }
+  }, []);
+
+  // 2. Prevent account crossover: If a different user signs in, purge other user's draft
+  useEffect(() => {
+    if (!loggedInUser?.email) return;
     try {
       const saved = localStorage.getItem(DRAFT_STORAGE_KEY);
       if (!saved) return;
       const parsed = JSON.parse(saved);
-      if (parsed && typeof parsed === "object") {
-        if (parsed.companyName) setCompanyName(parsed.companyName);
-        if (parsed.pitch) setPitch(parsed.pitch);
-        if (parsed.description) setDescription(parsed.description);
-        if (parsed.websiteUrl) setWebsiteUrl(parsed.websiteUrl);
-        if (parsed.country) setCountry(parsed.country);
-        if (parsed.address) setAddress(parsed.address);
-        if (parsed.location) {
-          setLocation(parsed.location);
-          if (!parsed.country) {
-            const detected = parseLocation(parsed.location);
-            if (detected.country) setCountry(detected.country);
-            if (detected.address) setAddress(detected.address);
-          }
-        }
-        if (parsed.foundedYear) setFoundedYear(String(parsed.foundedYear).slice(0, 4));
-        if (parsed.teamSize) setTeamSize(String(parsed.teamSize));
-        if (parsed.hqRegion) setHqRegion(parsed.hqRegion);
-        if (parsed.activityStatus) setActivityStatus(parsed.activityStatus);
-        if (Array.isArray(parsed.selectedIndustries)) setSelectedIndustries(parsed.selectedIndustries);
-        if (parsed.linkedinUrl) setLinkedinUrl(parsed.linkedinUrl);
-        if (parsed.twitterUrl) setTwitterUrl(parsed.twitterUrl);
-        if (Array.isArray(parsed.extraLinks)) setExtraLinks(parsed.extraLinks);
-        if (typeof parsed.isNonprofit === "boolean") setIsNonprofit(parsed.isNonprofit);
-        if (Array.isArray(parsed.founders) && parsed.founders.length > 0) setFounders(parsed.founders);
-        if (Array.isArray(parsed.jobs)) setJobs(parsed.jobs);
-        if (parsed.email && !loggedInUser) setEmail(parsed.email);
-        if (parsed.partnerEmails) setPartnerEmails(parsed.partnerEmails);
-        if (parsed.agreedToTerms) setAgreedToTerms(parsed.agreedToTerms);
-        if (parsed.logoPreview) setLogoPreview(parsed.logoPreview);
+      if (
+        parsed?.authorEmail &&
+        parsed.authorEmail.toLowerCase() !== loggedInUser.email.toLowerCase()
+      ) {
+        clearDraft();
+      }
+    } catch {}
+  }, [loggedInUser]);
 
-        const hasMeaningfulData = Boolean(
-          (parsed.companyName && String(parsed.companyName).trim()) ||
-          (parsed.pitch && String(parsed.pitch).trim()) ||
-          (parsed.description && String(parsed.description).trim()) ||
-          (parsed.websiteUrl && String(parsed.websiteUrl).trim()) ||
-          (Array.isArray(parsed.selectedIndustries) && parsed.selectedIndustries.length > 0) ||
-          (Array.isArray(parsed.founders) && parsed.founders.some((f: any) => f?.name && String(f.name).trim()))
-        );
+  // 3. Auto-save form draft to localStorage only when meaningful content exists
+  useEffect(() => {
+    if (!draftRestoredRef.current) return;
 
-        if (hasMeaningfulData) {
-          setRestoredNotice(true);
-        } else {
-          setRestoredNotice(false);
+    const timer = setTimeout(() => {
+      try {
+        const hasContentToSave = isMeaningfulDraft({
+          companyName,
+          pitch,
+          description,
+          websiteUrl,
+          founders,
+        });
+
+        if (!hasContentToSave) {
           try {
             localStorage.removeItem(DRAFT_STORAGE_KEY);
           } catch {}
+          return;
         }
-      }
-    } catch (err) {
-      console.error("Failed to restore draft:", err);
-    }
-  }, [loggedInUser]);
 
-  // Auto-save form draft to localStorage
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      try {
-        const hasContentToSave = Boolean(
-          companyName.trim() ||
-          pitch.trim() ||
-          description.trim() ||
-          websiteUrl.trim() ||
-          selectedIndustries.length > 0 ||
-          founders.some((f) => f.name && f.name.trim())
-        );
-        if (!hasContentToSave) return;
         const draft = {
+          savedAt: Date.now(),
+          authorEmail: loggedInUser?.email || (email.trim() || null),
           companyName,
           pitch,
           description,
@@ -359,7 +416,7 @@ export function AddStartupForm() {
           isNonprofit,
           founders,
           jobs,
-          email,
+          email: loggedInUser?.email || email,
           partnerEmails,
           agreedToTerms,
           logoPreview: logoPreview && logoPreview.startsWith("data:") ? logoPreview : undefined,
@@ -368,7 +425,7 @@ export function AddStartupForm() {
       } catch {
         // Ignore storage quota errors
       }
-    }, 400);
+    }, 500);
     return () => clearTimeout(timer);
   }, [
     companyName,
@@ -393,11 +450,13 @@ export function AddStartupForm() {
     partnerEmails,
     agreedToTerms,
     logoPreview,
+    loggedInUser,
   ]);
 
   const clearDraft = () => {
     try {
       localStorage.removeItem(DRAFT_STORAGE_KEY);
+      localStorage.removeItem(LEGACY_DRAFT_KEY);
     } catch {}
     setCompanyName("");
     setPitch("");
@@ -1040,21 +1099,40 @@ export function AddStartupForm() {
               <span>
                 ✓ <strong>Application details restored:</strong> Your previous inputs were preserved so you don&apos;t have to re-enter anything.
               </span>
-              <button
-                type="button"
-                onClick={clearDraft}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  color: "#dc2626",
-                  textDecoration: "underline",
-                  cursor: "pointer",
-                  fontSize: "12px",
-                  padding: 0,
-                }}
-              >
-                Clear form &amp; start over
-              </button>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <button
+                  type="button"
+                  onClick={clearDraft}
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    color: "#dc2626",
+                    textDecoration: "underline",
+                    cursor: "pointer",
+                    fontSize: "12px",
+                    padding: 0,
+                  }}
+                >
+                  Clear form &amp; start over
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRestoredNotice(false)}
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    color: "#6b7280",
+                    cursor: "pointer",
+                    fontSize: "16px",
+                    lineHeight: 1,
+                    padding: "0 4px",
+                  }}
+                  title="Dismiss banner"
+                  aria-label="Dismiss banner"
+                >
+                  ×
+                </button>
+              </div>
             </div>
           ) : null}
 

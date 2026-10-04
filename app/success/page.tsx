@@ -57,7 +57,7 @@ export default async function SuccessPage({
       {/* Clear saved draft once payment succeeds */}
       <script
         dangerouslySetInnerHTML={{
-          __html: `try{localStorage.removeItem("whyalligator_listing_draft_v1");}catch(e){}`,
+          __html: `try{localStorage.removeItem("whyalligator_listing_draft_v1");localStorage.removeItem("whyalligator_listing_draft_v2");}catch(e){}`,
         }}
       />
       <Confetti />

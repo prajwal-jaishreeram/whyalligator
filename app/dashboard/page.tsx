@@ -288,6 +288,17 @@ export default function DashboardPage() {
       if (compRes.status === "fulfilled" && compRes.value.data) {
         compList = compRes.value.data as Company[];
         setCompanies(compList);
+        if (typeof window !== "undefined" && compList.length > 0) {
+          try {
+            const draftRaw = localStorage.getItem("whyalligator_listing_draft_v2");
+            if (draftRaw) {
+              const draft = JSON.parse(draftRaw);
+              if (draft?.companyName && compList.some((c) => c.company_name?.toLowerCase().trim() === draft.companyName.toLowerCase().trim())) {
+                localStorage.removeItem("whyalligator_listing_draft_v2");
+              }
+            }
+          } catch {}
+        }
       }
 
       const computed = computeDisplayName(user.email ?? null, metaName, compList);
