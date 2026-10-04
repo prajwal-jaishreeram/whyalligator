@@ -2,13 +2,22 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 const MAX_BYTES = 2 * 1024 * 1024;
 
+const ALLOWED_MIME_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+  "image/webp",
+  "image/gif",
+]);
+
 export async function uploadPublicImage(
   supabase: SupabaseClient,
   file: File,
   folder: string,
 ): Promise<{ path: string; publicUrl: string } | { error: string }> {
-  if (!file.type.startsWith("image/")) {
-    return { error: "File must be an image." };
+  const mime = file.type.toLowerCase().trim();
+  if (!ALLOWED_MIME_TYPES.has(mime)) {
+    return { error: "Please upload a PNG, JPEG, WebP, or GIF image." };
   }
   if (file.size > MAX_BYTES) {
     return { error: "Images must be 2MB or smaller." };

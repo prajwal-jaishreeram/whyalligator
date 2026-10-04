@@ -37,9 +37,6 @@ export async function POST(request: Request) {
         userId = userData.user.id;
       }
     }
-    if (!userId && form.get("user_id")) {
-      userId = String(form.get("user_id")).trim() || null;
-    }
 
     const payload: ListingPayload = {
       ...parsed.payload,

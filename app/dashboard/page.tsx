@@ -1781,6 +1781,7 @@ export default function DashboardPage() {
                             href={companyPath(company)}
                             className="ghost-btn"
                             target="_blank"
+                            rel="noopener noreferrer"
                             style={{ height: "36px", fontSize: "13px" }}
                           >
                             View ↗

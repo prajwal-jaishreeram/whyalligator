@@ -7,8 +7,6 @@ export async function GET(request: Request) {
   try {
     const admin = createAdminClient();
     const url = new URL(request.url);
-    const simulate = url.searchParams.get("simulate"); // "open" | "countdown" | "completed"
-
     // 1. Fetch current milestone configuration
     let { data: milestone, error: milestoneErr } = await admin
       .from("batch_milestones")
@@ -45,6 +43,7 @@ export async function GET(request: Request) {
     const targetCount = milestone.target_count || 3000;
     let currentStatus = milestone.status;
     let countdownEndsAt = milestone.countdown_ends_at ? new Date(milestone.countdown_ends_at).getTime() : null;
+    let countdownEndsAtIso = milestone.countdown_ends_at || null;
     let countdownStartedAt = milestone.countdown_started_at;
 
     // 3. Automatic transition: trigger 8-hour countdown if Batch 1 reaches 3,000 listings
@@ -53,6 +52,7 @@ export async function GET(request: Request) {
       const endsAt = new Date(now.getTime() + 8 * 60 * 60 * 1000); // 8 hours
       countdownStartedAt = now.toISOString();
       countdownEndsAt = endsAt.getTime();
+      countdownEndsAtIso = endsAt.toISOString();
       currentStatus = "countdown";
 
       await admin
@@ -60,7 +60,7 @@ export async function GET(request: Request) {
         .update({
           status: "countdown",
           countdown_started_at: countdownStartedAt,
-          countdown_ends_at: endsAt.toISOString(),
+          countdown_ends_at: countdownEndsAtIso,
           updated_at: now.toISOString(),
         })
         .eq("batch_name", "Batch 1");
@@ -136,7 +136,7 @@ export async function GET(request: Request) {
       funding_amount: milestone.funding_amount || 30000,
       status: currentStatus,
       countdown_started_at: countdownStartedAt,
-      countdown_ends_at: milestone.countdown_ends_at,
+      countdown_ends_at: countdownEndsAtIso,
       time_remaining_ms: timeRemainingMs,
       leading_company: leadingCompany,
       winner_company: winnerCompany,

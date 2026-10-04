@@ -74,11 +74,14 @@ export async function POST(request: Request) {
   if (pendingId) {
     const { data: pending, error: pendingError } = await supabase
       .from("pending_listings")
-      .select("payload")
+      .select("payload, consumed_at")
       .eq("id", pendingId)
       .maybeSingle();
     if (pendingError) {
       console.error(pendingError);
+    }
+    if (pending?.consumed_at) {
+      return NextResponse.json({ received: true, skipped: "already_consumed" });
     }
     payload = (pending?.payload as ListingPayload) ?? null;
   }

@@ -10,13 +10,18 @@ export async function GET(
 ) {
   try {
     const { slug } = await params;
+    const safeSlug = String(slug || "").replace(/[^a-zA-Z0-9_-]/g, "");
+    if (!safeSlug) {
+      return NextResponse.json({ error: "Invalid company identifier" }, { status: 400 });
+    }
+
     const admin = createAdminClient();
 
     // Fetch company
     const { data: company, error: compErr } = await admin
       .from("companies")
       .select("id, upvotes_count, created_at, user_id, email, partner_emails")
-      .eq("slug", slug)
+      .or(`slug.eq.${safeSlug},id.eq.${safeSlug}`)
       .maybeSingle();
 
     if (compErr || !company) {
@@ -110,13 +115,18 @@ export async function POST(
       );
     }
 
+    const safeSlug = String(slug || "").replace(/[^a-zA-Z0-9_-]/g, "");
+    if (!safeSlug) {
+      return NextResponse.json({ error: "Invalid company identifier" }, { status: 400 });
+    }
+
     const user = userData.user;
 
     // Fetch company
     const { data: company, error: compErr } = await admin
       .from("companies")
       .select("id, upvotes_count, company_name, slug, user_id, email, partner_emails, created_at")
-      .eq("slug", slug)
+      .or(`slug.eq.${safeSlug},id.eq.${safeSlug}`)
       .maybeSingle();
 
     if (compErr || !company) {

@@ -10,13 +10,18 @@ export async function GET(
 ) {
   try {
     const { slug } = await params;
+    const safeSlug = String(slug || "").replace(/[^a-zA-Z0-9_-]/g, "");
+    if (!safeSlug) {
+      return NextResponse.json({ error: "Invalid company identifier" }, { status: 400 });
+    }
+
     const admin = createAdminClient();
 
     // Fetch company
     const { data: company, error: compErr } = await admin
       .from("companies")
       .select("id")
-      .eq("slug", slug)
+      .or(`slug.eq.${safeSlug},id.eq.${safeSlug}`)
       .maybeSingle();
 
     if (compErr || !company) {
@@ -101,9 +106,21 @@ export async function POST(
     const targetParentId = body.parent_id ? String(body.parent_id) : null;
     const explicitReplyTo = body.reply_to_username ? String(body.reply_to_username).replace(/^@/, "") : null;
 
+    const safeSlug = String(slug || "").replace(/[^a-zA-Z0-9_-]/g, "");
+    if (!safeSlug) {
+      return NextResponse.json({ error: "Invalid company identifier" }, { status: 400 });
+    }
+
     if (!content || content.length < 2) {
       return NextResponse.json(
         { error: "Comment must be at least 2 characters long." },
+        { status: 400 }
+      );
+    }
+
+    if (content.length > 2000) {
+      return NextResponse.json(
+        { error: "Comment cannot exceed 2,000 characters." },
         { status: 400 }
       );
     }
@@ -112,7 +129,7 @@ export async function POST(
     const { data: company, error: compErr } = await admin
       .from("companies")
       .select("id, slug, company_name, user_id, email, partner_emails")
-      .eq("slug", slug)
+      .or(`slug.eq.${safeSlug},id.eq.${safeSlug}`)
       .maybeSingle();
 
     if (compErr || !company) {

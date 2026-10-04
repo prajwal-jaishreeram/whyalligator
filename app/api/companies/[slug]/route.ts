@@ -28,6 +28,11 @@ export async function PUT(
 ) {
   try {
     const { slug } = await params;
+    const safeSlug = String(slug || "").replace(/[^a-zA-Z0-9_-]/g, "");
+    if (!safeSlug) {
+      return NextResponse.json({ error: "Invalid company identifier" }, { status: 400 });
+    }
+
     const body = await request.json();
     const admin = createAdminClient();
 
@@ -35,7 +40,7 @@ export async function PUT(
     const { data: company, error: fetchError } = await admin
       .from("companies")
       .select("id, user_id, email, slug, partner_emails, company_name, website_url, upvotes_count")
-      .or(`slug.eq.${slug},id.eq.${slug}`)
+      .or(`slug.eq.${safeSlug},id.eq.${safeSlug}`)
       .maybeSingle();
 
     if (fetchError || !company) {
