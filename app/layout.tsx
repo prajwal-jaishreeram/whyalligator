@@ -7,18 +7,19 @@ import "./globals.css";
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.whyalligator.com"),
   title: {
-    default: "WhyAlligator — The Global Startup Directory for the Other 99%",
+    default: "WhyAlligator — Discover & Launch Ambitious Startups",
     template: "%s | WhyAlligator",
   },
   description:
-    "YC accepts 1%. We back the other 99%. List for $20 once to reach customers & investors. When Batch 1 fills (3,000 startups), #1 wins a $30,000 equity-free grant.",
+    "The global startup launchpad for ambitious founders. List your product for $20, get discovered by active customers and investors, and compete for $30,000 in equity-free grants.",
   keywords: [
     "startup directory",
-    "indie founders",
     "launch startup",
     "discover startups",
+    "indie founders",
     "equity free funding",
     "startup funding",
+    "build in public",
     "Y Combinator alternative",
     "startup jobs",
   ],
@@ -29,25 +30,25 @@ export const metadata: Metadata = {
     locale: "en_US",
     url: "https://www.whyalligator.com",
     siteName: "WhyAlligator",
-    title: "WhyAlligator — The Global Startup Directory for the Other 99%",
+    title: "WhyAlligator — Discover & Launch Ambitious Startups",
     description:
-      "YC accepts 1%. We back the other 99%. List for $20 once to reach customers & investors. When Batch 1 fills (3,000 startups), #1 wins a $30,000 equity-free grant.",
+      "The global startup launchpad for ambitious founders. List your product for $20, get discovered by active customers and investors, and compete for $30,000 in equity-free grants.",
     images: [
       {
-        url: "/logo.png",
-        width: 512,
-        height: 512,
-        alt: "WhyAlligator Startup Directory",
+        url: "/og-image.png",
+        width: 1024,
+        height: 486,
+        alt: "WhyAlligator — Discover & Launch Ambitious Startups",
       },
     ],
   },
   twitter: {
-    card: "summary",
-    title: "WhyAlligator — The Global Startup Directory for the Other 99%",
+    card: "summary_large_image",
+    title: "WhyAlligator — Discover & Launch Ambitious Startups",
     description:
-      "YC accepts 1%. We back the other 99%. List for $20 once to reach customers & investors. When Batch 1 fills (3,000 startups), #1 wins a $30,000 equity-free grant.",
+      "The global startup launchpad for ambitious founders. List your product for $20, get discovered by active customers and investors, and compete for $30,000 in equity-free grants.",
     creator: "@Prajwal_shindee",
-    images: ["/logo.png"],
+    images: ["/og-image.png"],
   },
   robots: {
     index: true,
@@ -90,6 +91,25 @@ export default function RootLayout({
             gtag('config', 'G-HVJZVR5B39');
           `}
         </Script>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "WebSite",
+              name: "WhyAlligator",
+              alternateName: ["Why Alligator", "WhyAlligator Startup Directory"],
+              url: "https://www.whyalligator.com",
+              description:
+                "The global startup launchpad for ambitious founders. List your product for $20, get discovered by active customers and investors, and compete for $30,000 in equity-free grants.",
+              potentialAction: {
+                "@type": "SearchAction",
+                target: "https://www.whyalligator.com/?q={search_term_string}",
+                "query-input": "required name=search_term_string",
+              },
+            }),
+          }}
+        />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link

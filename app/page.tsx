@@ -6,9 +6,9 @@ import { getLiveCompanies } from "@/lib/companies";
 export const revalidate = 60;
 
 export const metadata = {
-  title: "Startup Directory | Discover & Launch Real Startups | WhyAlligator",
+  title: "WhyAlligator — Discover & Launch Ambitious Startups",
   description:
-    "YC takes 1%. We back the other 99%. List for $20 once to get discovered by customers & investors. When Batch 1 fills (3,000 startups), #1 wins a $30,000 equity-free grant.",
+    "The global startup launchpad for ambitious founders. List your product for $20, get discovered by active customers and investors, and compete for $30,000 in equity-free grants.",
 };
 
 export default async function HomePage() {
