@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase";
+import { sendWinnerCongratulationsEmail } from "@/lib/email";
 
 export const runtime = "nodejs";
 
@@ -69,7 +70,7 @@ export async function GET(request: Request) {
     // 4. Fetch the real-time top-voted startup
     const { data: leadingList } = await admin
       .from("companies")
-      .select("id, slug, company_name, pitch, logo_url, upvotes_count, batch, is_batch_winner, winner_badge")
+      .select("id, slug, company_name, email, pitch, logo_url, upvotes_count, batch, is_batch_winner, winner_badge")
       .eq("status", "live")
       .order("upvotes_count", { ascending: false })
       .order("created_at", { ascending: true })
@@ -108,6 +109,18 @@ export async function GET(request: Request) {
             updated_at: now.toISOString(),
           })
           .eq("batch_name", "Batch 1");
+
+        // Send official winner congratulations email to the winning startup founder
+        if (leadingCompany.email) {
+          sendWinnerCongratulationsEmail({
+            email: leadingCompany.email,
+            companyName: leadingCompany.company_name,
+            slug: leadingCompany.slug,
+            batchName: "Batch 1",
+            grantAmount: milestone.funding_amount || 30000,
+            upvotesCount: leadingCompany.upvotes_count || 0,
+          }).catch((e) => console.error("Failed to send winner email:", e));
+        }
       } else {
         await admin
           .from("batch_milestones")

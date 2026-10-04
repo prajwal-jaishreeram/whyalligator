@@ -113,7 +113,7 @@ async function dispatchEmail(params: {
   html: string;
 }): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.RESEND_FROM_EMAIL || "WhyAlligator <notifications@whyalligator.com>";
+  const from = process.env.RESEND_FROM_EMAIL || "WhyAlligator <hello@whyalligator.com>";
 
   if (!apiKey) {
     console.log(`[Email Mock/Skip] To: ${params.to} | Subject: "${params.subject}"`);
@@ -306,3 +306,56 @@ export async function sendNewCommentEmail(input: {
     html,
   });
 }
+
+/**
+ * 6. Official Batch Champion & $30,000 Equity-Free Grant Winner Announcement
+ */
+export async function sendWinnerCongratulationsEmail(input: {
+  email: string;
+  companyName: string;
+  slug: string;
+  batchName: string;
+  grantAmount: number;
+  upvotesCount: number;
+}): Promise<void> {
+  const safeName = escapeHtml(input.companyName);
+  const link = `${siteUrl()}/companies/${input.slug}`;
+  const formattedGrant = `$${input.grantAmount.toLocaleString()}`;
+
+  const html = baseEmailWrapper({
+    headline: `🏆 Congratulations! ${safeName} has won the ${input.batchName} Grant!`,
+    badge: { text: `Official ${input.batchName} Winner`, bg: "#fef3c7", color: "#92400e" },
+    bodyHtml: `
+      <p style="font-size: 16px; line-height: 1.6; color: #111827;">
+        The community countdown has officially concluded, and <strong>${safeName}</strong> finished as the <strong>#1 most upvoted startup with ${input.upvotesCount} community votes</strong>!
+      </p>
+      <div style="background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border: 1.5px solid #fde68a; border-radius: 8px; padding: 20px 24px; margin: 24px 0; text-align: center;">
+        <span style="font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: #92400e; font-weight: 700; display: block; margin-bottom: 6px;">
+          Milestone Award
+        </span>
+        <span style="font-size: 32px; font-weight: 800; color: #b45309; display: block; letter-spacing: -0.5px;">
+          ${formattedGrant} Equity-Free
+        </span>
+        <span style="font-size: 13px; color: #78350f; display: block; margin-top: 6px;">
+          Zero equity taken &bull; Direct founder grant &bull; Permanent Champion badge
+        </span>
+      </div>
+      <p>
+        Your startup has been awarded the permanent <strong>"${input.batchName} Winner"</strong> trophy badge across the directory homepage, category rankings, and your official profile.
+      </p>
+      <p>
+        Our team will follow up via this email address (<strong>${escapeHtml(input.email)}</strong>) to verify your payout details and schedule the fund disbursement.
+      </p>
+    `,
+    ctaText: "View Your Champion Listing",
+    ctaUrl: link,
+    footerTip: "Keep your founder profile and contact information updated in the dashboard to ensure seamless disbursement verification.",
+  });
+
+  await dispatchEmail({
+    to: input.email,
+    subject: `🏆 Congratulations! ${input.companyName} won the ${input.batchName} ${formattedGrant} Grant!`,
+    html,
+  });
+}
+
