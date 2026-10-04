@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Add your startup | WhyAlligator",
   description:
-    "Y Combinator accepts 1%. We accept the other 99%. List your startup in Batch 1 — once all 3,000 listings are filled, the top-voted startup wins a $30,000 equity-free grant.",
+    "Y Combinator accepts 1%. We accept the other 99%. List your startup for a flat $20 one-time fee in Batch 1 — once all 3,000 listings are filled, the top-voted startup wins a $30,000 equity-free grant.",
 };
 
 export default async function AddPage({
