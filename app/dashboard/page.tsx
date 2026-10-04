@@ -140,6 +140,9 @@ export default function DashboardPage() {
   const [emailSaving, setEmailSaving] = useState(false);
   const [emailMsg, setEmailMsg] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
+  const [pendingNewEmail, setPendingNewEmail] = useState<string | null>(null);
+  const [emailOtpCode, setEmailOtpCode] = useState("");
+  const [emailOtpVerifying, setEmailOtpVerifying] = useState(false);
 
   // Settings: Password state
   const [currentPassword, setCurrentPassword] = useState("");
@@ -749,13 +752,56 @@ export default function DashboardPage() {
       const supabase = createBrowserClient();
       const { error } = await supabase.auth.updateUser({ email: trimmed });
       if (error) throw error;
-      setEmailMsg("Confirmation email sent! Please check both your current and new inbox to confirm.");
-      setEmailInput("");
+      setPendingNewEmail(trimmed);
+      setEmailMsg(`Confirmation code sent to ${trimmed}! Enter the 6-digit code below (or click the confirmation link in the email) to complete the change.`);
+      setEmailOtpCode("");
     } catch (err: unknown) {
       setEmailError(err instanceof Error ? err.message : "Failed to update email.");
     } finally {
       setEmailSaving(false);
     }
+  }
+
+  // Handle entering the confirmation code for email change directly in the dashboard
+  async function handleVerifyEmailOtp(e: React.FormEvent) {
+    e.preventDefault();
+    if (!pendingNewEmail) return;
+    const cleanCode = emailOtpCode.trim();
+    if (cleanCode.length < 6) {
+      setEmailError("Please enter the complete 6-digit confirmation code.");
+      return;
+    }
+    setEmailOtpVerifying(true);
+    setEmailError(null);
+    try {
+      const supabase = createBrowserClient();
+      // Supabase email change confirmation with token
+      const { data, error } = await supabase.auth.verifyOtp({
+        email: pendingNewEmail,
+        token: cleanCode,
+        type: "email_change",
+      });
+      if (error) throw error;
+      const updatedUser = data.user;
+      const newAddr = updatedUser?.email || pendingNewEmail;
+      setUserEmail(newAddr);
+      setPendingNewEmail(null);
+      setEmailInput("");
+      setEmailOtpCode("");
+      setEmailMsg("✓ Email address updated successfully!");
+      setTimeout(() => setEmailMsg(null), 5000);
+    } catch (err: unknown) {
+      setEmailError(err instanceof Error ? err.message : "Invalid or expired confirmation code. Please check the code or try again.");
+    } finally {
+      setEmailOtpVerifying(false);
+    }
+  }
+
+  function handleCancelEmailChange() {
+    setPendingNewEmail(null);
+    setEmailOtpCode("");
+    setEmailError(null);
+    setEmailMsg(null);
   }
 
   // Handle Password update
@@ -2884,34 +2930,75 @@ export default function DashboardPage() {
                 </div>
               ) : null}
 
-              <form onSubmit={handleUpdateEmail} style={{ display: "flex", flexDirection: "column", gap: "12px", maxWidth: "480px" }}>
-                <div>
-                  <label style={{ display: "block", fontSize: "13px", fontWeight: 500, marginBottom: "4px", color: "#374151" }}>
-                    New Email Address
-                  </label>
-                  <input
-                    type="email"
-                    value={emailInput}
-                    onChange={(e) => setEmailInput(e.target.value)}
-                    placeholder="newemail@example.com"
-                    required
-                    style={{ width: "100%", padding: "10px 12px", fontSize: "14px", border: "1px solid #d1d5db", borderRadius: "8px", boxSizing: "border-box" }}
-                  />
-                  <span style={{ fontSize: "12px", color: "var(--muted)", marginTop: "4px", display: "block" }}>
-                    A confirmation link will be sent to both your current and new email address.
-                  </span>
-                </div>
-                <div>
-                  <button
-                    type="submit"
-                    className="hero-cta"
-                    style={{ height: "38px", fontSize: "14px", padding: "0 18px", marginTop: "4px" }}
-                    disabled={emailSaving}
-                  >
-                    {emailSaving ? "Sending..." : "Update Email"}
-                  </button>
-                </div>
-              </form>
+              {pendingNewEmail ? (
+                <form onSubmit={handleVerifyEmailOtp} style={{ display: "flex", flexDirection: "column", gap: "12px", maxWidth: "480px" }}>
+                  <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", padding: "14px 16px", borderRadius: "8px" }}>
+                    <label style={{ display: "block", fontSize: "13px", fontWeight: 600, marginBottom: "4px", color: "#1e293b" }}>
+                      Enter 6-Digit Confirmation Code
+                    </label>
+                    <p style={{ fontSize: "12px", color: "var(--muted)", margin: "0 0 10px 0" }}>
+                      We sent a confirmation code to <strong>{pendingNewEmail}</strong>. Enter the code here, or click the link in your email.
+                    </p>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      value={emailOtpCode}
+                      onChange={(e) => setEmailOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                      placeholder="123456"
+                      maxLength={6}
+                      required
+                      style={{ width: "100%", padding: "10px 12px", fontSize: "18px", letterSpacing: "6px", fontFamily: "monospace", border: "1px solid #cbd5e1", borderRadius: "6px", boxSizing: "border-box", textAlign: "center" }}
+                    />
+                  </div>
+                  <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                    <button
+                      type="submit"
+                      className="hero-cta"
+                      style={{ height: "38px", fontSize: "14px", padding: "0 18px" }}
+                      disabled={emailOtpVerifying || emailOtpCode.trim().length < 6}
+                    >
+                      {emailOtpVerifying ? "Verifying..." : "Confirm Code"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCancelEmailChange}
+                      style={{ height: "38px", padding: "0 14px", fontSize: "13px", background: "transparent", border: "1px solid #d1d5db", borderRadius: "6px", color: "var(--muted)", cursor: "pointer" }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <form onSubmit={handleUpdateEmail} style={{ display: "flex", flexDirection: "column", gap: "12px", maxWidth: "480px" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "13px", fontWeight: 500, marginBottom: "4px", color: "#374151" }}>
+                      New Email Address
+                    </label>
+                    <input
+                      type="email"
+                      value={emailInput}
+                      onChange={(e) => setEmailInput(e.target.value)}
+                      placeholder="newemail@example.com"
+                      required
+                      style={{ width: "100%", padding: "10px 12px", fontSize: "14px", border: "1px solid #d1d5db", borderRadius: "8px", boxSizing: "border-box" }}
+                    />
+                    <span style={{ fontSize: "12px", color: "var(--muted)", marginTop: "4px", display: "block" }}>
+                      A 6-digit confirmation code and link will be sent to verify your new email address.
+                    </span>
+                  </div>
+                  <div>
+                    <button
+                      type="submit"
+                      className="hero-cta"
+                      style={{ height: "38px", fontSize: "14px", padding: "0 18px", marginTop: "4px" }}
+                      disabled={emailSaving}
+                    >
+                      {emailSaving ? "Sending code..." : "Update Email"}
+                    </button>
+                  </div>
+                </form>
+              )}
             </div>
 
             {/* Change Password */}
