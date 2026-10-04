@@ -1811,6 +1811,27 @@ select {
   text-decoration: underline;
 }
 
+/* Header notifications popover & mobile left bell */
+.mobile-header-left {
+  display: none;
+}
+
+.header-notifications-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 20px;
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.08);
+  z-index: 1000;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
 @media (max-width: 1199px) {
   .nav-left,
   .nav-right {
@@ -1825,6 +1846,66 @@ select {
     align-items: center;
     gap: 12px;
     padding: 10px 16px;
+  }
+
+  .mobile-header-left {
+    display: flex !important;
+    grid-column: 1;
+    justify-self: start;
+    align-items: center;
+    position: relative;
+  }
+
+  .mobile-notif-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    color: #111827;
+    cursor: pointer;
+    padding: 0;
+    transition: background-color 0.15s ease;
+  }
+
+  .mobile-notif-btn:active {
+    background: #f3f4f6;
+  }
+
+  .mobile-notif-badge {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    background: #dc2626;
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: 700;
+    min-width: 16px;
+    height: 16px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 3px;
+    box-shadow: 0 0 0 2px #fff;
+    line-height: 1;
+  }
+
+  .header-notifications-dropdown {
+    position: fixed !important;
+    top: 58px !important;
+    left: 12px !important;
+    right: 12px !important;
+    width: auto !important;
+    max-width: 400px !important;
+    margin: 0 auto !important;
+    border-radius: 14px !important;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.18) !important;
+    z-index: 1001 !important;
   }
 
   .brand-mark {
