@@ -11,7 +11,7 @@ export const metadata: Metadata = {
     template: "%s | WhyAlligator",
   },
   description:
-    "Discover ambitious startups building the future. Join Batch 1 with up to 3,000 founders, collect community upvotes, and qualify for $30,000 in equity-free funding.",
+    "Discover ambitious startups building the future. Join Batch 1 — once all 3,000 listings are filled, the #1 top-voted startup wins a $30,000 equity-free grant.",
   keywords: [
     "startup directory",
     "indie founders",
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
     siteName: "WhyAlligator",
     title: "WhyAlligator — The Global Startup Directory for the Other 99%",
     description:
-      "Discover ambitious startups building the future. Join Batch 1, collect community upvotes, and qualify for $30,000 in equity-free funding.",
+      "Discover ambitious startups building the future. Join Batch 1 — once all 3,000 listings are filled, the #1 top-voted startup wins a $30,000 equity-free grant.",
     images: [
       {
         url: "/logo.png",
@@ -45,7 +45,7 @@ export const metadata: Metadata = {
     card: "summary",
     title: "WhyAlligator — The Global Startup Directory for the Other 99%",
     description:
-      "Discover ambitious startups building the future. Join Batch 1, collect community upvotes, and qualify for $30,000 in equity-free funding.",
+      "Discover ambitious startups building the future. Join Batch 1 — once all 3,000 listings are filled, the #1 top-voted startup wins a $30,000 equity-free grant.",
     creator: "@Prajwal_shindee",
     images: ["/logo.png"],
   },

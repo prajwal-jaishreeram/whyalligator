@@ -2034,7 +2034,7 @@ export function AddStartupForm() {
           <div className={`yc-step-content ${currentStep === "submit" ? "is-visible" : "is-hidden"}`}>
             <h2 className="yc-section-title">Review & Submit</h2>
             <p className="yc-section-subtitle">
-              Here is how your startup will appear on WhyAlligator once payment clears ($20 flat, one-time).
+              Here is how your startup will appear on WhyAlligator once payment clears ($20 flat, one-time). You&apos;ll be entered into Batch 1 — once all 3,000 spots are filled, the #1 top-voted startup wins a <strong>$30,000 equity-free grant</strong>!
             </p>
 
             {/* LIVE CARD PREVIEW */}

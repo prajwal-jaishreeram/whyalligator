@@ -8,7 +8,7 @@ export const revalidate = 60;
 export const metadata = {
   title: "Startup Directory | Discover & Launch Real Startups | WhyAlligator",
   description:
-    "Y Combinator takes 1%. We back the other 99%. Get discovered by early customers and investors, gain valuable SEO backlinks, and join our active community.",
+    "Y Combinator takes 1%. We back the other 99%. List your startup in Batch 1: once all 3,000 spots are filled, the #1 top-voted startup wins a $30,000 equity-free grant.",
 };
 
 export default async function HomePage() {
@@ -20,7 +20,7 @@ export default async function HomePage() {
         <h1>Startup Directory</h1>
         <p className="hero-copy">
           Y Combinator takes 1%. We back the other 99%.<br />
-          Get discovered by early customers and investors, earn high-authority backlinks, and participate in our $30,000 equity-free Batch 1 grant.
+          Get discovered by early customers &amp; investors, earn backlinks, and compete in Batch 1: once all 3,000 listings are filled, the #1 top-voted startup wins a <strong>$30,000 equity-free grant</strong>.
         </p>
         <Link href="/add" className="hero-cta">
           Add your startup
