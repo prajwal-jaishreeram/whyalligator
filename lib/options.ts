@@ -51,6 +51,20 @@ export const INDUSTRY_TAXONOMY: TaxonomyItem[] = [
     ],
   },
   {
+    name: "B2C",
+    subcategories: [
+      "Consumer Apps & Mobile",
+      "E-Commerce & D2C",
+      "Social & Community",
+      "Gaming & Entertainment",
+      "Content & Media",
+      "Consumer Hardware",
+      "Food & Beverage",
+      "Health & Wellness",
+      "Travel & Hospitality",
+    ],
+  },
+  {
     name: "Consumer",
     subcategories: [
       "Apparel and Cosmetics",

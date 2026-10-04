@@ -97,6 +97,10 @@ INDUSTRY_ALIASES.set("llm", "llms & foundation models");
 INDUSTRY_ALIASES.set("llms", "llms & foundation models");
 INDUSTRY_ALIASES.set("software as a service", "saas");
 INDUSTRY_ALIASES.set("sass", "saas");
+INDUSTRY_ALIASES.set("b to c", "b2c");
+INDUSTRY_ALIASES.set("business to consumer", "b2c");
+INDUSTRY_ALIASES.set("d2c", "e-commerce & d2c");
+INDUSTRY_ALIASES.set("direct to consumer", "e-commerce & d2c");
 
 /** Lower-cased tags plus the parent category of every subcategory tag. */
 export function companyIndustrySet(company: Pick<Company, "industries">): Set<string> {
