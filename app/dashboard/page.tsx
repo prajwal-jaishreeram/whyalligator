@@ -1433,7 +1433,7 @@ export default function DashboardPage() {
             >
               <h2 style={{ margin: 0 }}>Your Listed Startups ({companies.length})</h2>
               <Link href="/add" className="apply-btn">
-                + List another startup ($20)
+                + List another startup
               </Link>
             </div>
 
@@ -1479,7 +1479,7 @@ export default function DashboardPage() {
                 </p>
                 <div style={{ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" }}>
                   <Link href="/add" className="hero-cta" style={{ height: "40px", padding: "0 22px", display: "inline-flex", alignItems: "center" }}>
-                    + List your startup ($20)
+                    + List your startup
                   </Link>
                   {userRole !== "founder" ? (
                     <button

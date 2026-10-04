@@ -791,7 +791,7 @@ export function DirectoryClient({ companies }: { companies: Company[] }) {
                         justifyContent: "center",
                         padding: "6px 8px",
                       }}
-                      title="Click to claim this spot ($20)"
+                      title="Click to claim this spot and add your startup"
                     >
                       <span className="upvote-arrow" style={{ color: "#ffffff", fontSize: "11px" }}>▲</span>
                       <span className="upvote-num" style={{ color: "#ffffff", fontSize: "11px", fontWeight: 700 }}>

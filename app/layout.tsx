@@ -5,8 +5,61 @@ import { Header } from "@/components/Header";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Startup Directory | WhyAlligator",
-  description: "Y Combinator accepts 1%. We accept the other 99%.",
+  metadataBase: new URL("https://www.whyalligator.com"),
+  title: {
+    default: "WhyAlligator — The Global Startup Directory for the Other 99%",
+    template: "%s | WhyAlligator",
+  },
+  description:
+    "Discover ambitious startups building the future. Join Batch 1 with up to 3,000 founders, collect community upvotes, and qualify for $30,000 in equity-free funding.",
+  keywords: [
+    "startup directory",
+    "indie founders",
+    "launch startup",
+    "discover startups",
+    "equity free funding",
+    "startup funding",
+    "Y Combinator alternative",
+    "startup jobs",
+  ],
+  authors: [{ name: "WhyAlligator" }],
+  creator: "WhyAlligator",
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "https://www.whyalligator.com",
+    siteName: "WhyAlligator",
+    title: "WhyAlligator — The Global Startup Directory for the Other 99%",
+    description:
+      "Discover ambitious startups building the future. Join Batch 1, collect community upvotes, and qualify for $30,000 in equity-free funding.",
+    images: [
+      {
+        url: "/logo.png",
+        width: 512,
+        height: 512,
+        alt: "WhyAlligator Startup Directory",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary",
+    title: "WhyAlligator — The Global Startup Directory for the Other 99%",
+    description:
+      "Discover ambitious startups building the future. Join Batch 1, collect community upvotes, and qualify for $30,000 in equity-free funding.",
+    creator: "@Prajwal_shindee",
+    images: ["/logo.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },

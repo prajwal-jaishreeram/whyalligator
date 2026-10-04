@@ -66,9 +66,16 @@ export default function TermsPage() {
         says otherwise. If a court finds one clause unenforceable, the rest
         still apply.
       </p>
+      <h2>Batch 1 milestones & equity-free funding</h2>
+      <p>
+        Upon reaching full capacity of 3,000 listed startups in Batch 1, a live 8-hour
+        countdown timer will officially begin. At the conclusion of this countdown, one
+        featured company from Batch 1 will be awarded $30,000 in non-dilutive grant funding
+        with zero equity taken.
+      </p>
       <h2>Contact</h2>
       <p>
-        Questions about these terms: use the Contact page.
+        Questions about these terms: use the <a href="/contact">Contact page</a>.
       </p>
     </ProsePage>
   );

@@ -24,7 +24,7 @@ export function Footer() {
                 <Link href="/jobs">Work at a Startup</Link>
               </li>
               <li>
-                <Link href="/add">Pay $20, get listed</Link>
+                <Link href="/add">Add your startup</Link>
               </li>
             </ul>
           </div>
