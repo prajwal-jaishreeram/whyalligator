@@ -90,6 +90,13 @@ INDUSTRY_ALIASES.set("personal", "home and personal");
 INDUSTRY_ALIASES.set("apparel", "apparel and cosmetics");
 INDUSTRY_ALIASES.set("cosmetics", "apparel and cosmetics");
 INDUSTRY_ALIASES.set("architecture", "architecture and engineering");
+INDUSTRY_ALIASES.set("artificial intelligence", "ai");
+INDUSTRY_ALIASES.set("gen ai", "generative ai");
+INDUSTRY_ALIASES.set("genai", "generative ai");
+INDUSTRY_ALIASES.set("llm", "llms & foundation models");
+INDUSTRY_ALIASES.set("llms", "llms & foundation models");
+INDUSTRY_ALIASES.set("software as a service", "saas");
+INDUSTRY_ALIASES.set("sass", "saas");
 
 /** Lower-cased tags plus the parent category of every subcategory tag. */
 export function companyIndustrySet(company: Pick<Company, "industries">): Set<string> {

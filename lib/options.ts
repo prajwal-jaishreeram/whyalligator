@@ -5,6 +5,32 @@ export type TaxonomyItem = {
 
 export const INDUSTRY_TAXONOMY: TaxonomyItem[] = [
   {
+    name: "AI",
+    subcategories: [
+      "Generative AI",
+      "LLMs & Foundation Models",
+      "AI Agents & Automation",
+      "Machine Learning",
+      "Computer Vision",
+      "Natural Language Processing",
+      "AI Infrastructure & Developer Tools",
+      "Robotics & Autonomous Systems",
+    ],
+  },
+  {
+    name: "SaaS",
+    subcategories: [
+      "B2B SaaS",
+      "Enterprise SaaS",
+      "Vertical SaaS",
+      "Micro-SaaS",
+      "Productivity & Workflow",
+      "Customer Support & Success",
+      "Sales & Marketing Automation",
+      "HR & Operations SaaS",
+    ],
+  },
+  {
     name: "B2B",
     subcategories: [
       "Analytics",

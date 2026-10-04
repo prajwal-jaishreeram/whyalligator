@@ -303,7 +303,24 @@ export function AddStartupForm() {
         if (parsed.partnerEmails) setPartnerEmails(parsed.partnerEmails);
         if (parsed.agreedToTerms) setAgreedToTerms(parsed.agreedToTerms);
         if (parsed.logoPreview) setLogoPreview(parsed.logoPreview);
-        setRestoredNotice(true);
+
+        const hasMeaningfulData = Boolean(
+          (parsed.companyName && String(parsed.companyName).trim()) ||
+          (parsed.pitch && String(parsed.pitch).trim()) ||
+          (parsed.description && String(parsed.description).trim()) ||
+          (parsed.websiteUrl && String(parsed.websiteUrl).trim()) ||
+          (Array.isArray(parsed.selectedIndustries) && parsed.selectedIndustries.length > 0) ||
+          (Array.isArray(parsed.founders) && parsed.founders.some((f: any) => f?.name && String(f.name).trim()))
+        );
+
+        if (hasMeaningfulData) {
+          setRestoredNotice(true);
+        } else {
+          setRestoredNotice(false);
+          try {
+            localStorage.removeItem(DRAFT_STORAGE_KEY);
+          } catch {}
+        }
       }
     } catch (err) {
       console.error("Failed to restore draft:", err);
@@ -314,7 +331,15 @@ export function AddStartupForm() {
   useEffect(() => {
     const timer = setTimeout(() => {
       try {
-        if (!companyName && !pitch && !description && !email) return;
+        const hasContentToSave = Boolean(
+          companyName.trim() ||
+          pitch.trim() ||
+          description.trim() ||
+          websiteUrl.trim() ||
+          selectedIndustries.length > 0 ||
+          founders.some((f) => f.name && f.name.trim())
+        );
+        if (!hasContentToSave) return;
         const draft = {
           companyName,
           pitch,
@@ -1056,7 +1081,7 @@ export function AddStartupForm() {
             >
               <span style={{ fontSize: "16px", flexShrink: 0 }}>💡</span>
               <div>
-                <strong>Pro Tip:</strong> Please verify your <strong>Company Name</strong> and <strong>Website URL</strong> carefully. Once your startup reaches 25 upvotes, modifying either field will permanently reset your upvotes, comments, and ranking back to zero.
+                <strong>Note:</strong> Please verify your <strong>Company Name</strong> and <strong>Website URL</strong> carefully. Once your startup reaches 25 upvotes, modifying either field will permanently reset your upvotes, comments, and ranking back to zero.
               </div>
             </div>
 
