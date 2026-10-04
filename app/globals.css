@@ -3666,7 +3666,7 @@ select {
 /* Base Milestone Card */
 .milestone-card {
   border: 1px solid #e5e7eb;
-  border-radius: 0 0 12px 12px;
+  border-radius: 12px;
   background: #ffffff;
   overflow: hidden;
   position: relative;

@@ -6,9 +6,9 @@ import { getLiveCompanies } from "@/lib/companies";
 export const revalidate = 60;
 
 export const metadata = {
-  title: "Startup Directory — Discover & Launch Real Startups | WhyAlligator",
+  title: "Startup Directory | Discover & Launch Real Startups | WhyAlligator",
   description:
-    "Y Combinator takes 1%. We back the other 99%. List in Batch 1. When 3,000 startups join, an 8-hour countdown begins and #1 wins $30,000 equity-free.",
+    "Y Combinator takes 1%. We back the other 99%. Get discovered by early customers and investors, gain valuable SEO backlinks, and join our active community.",
 };
 
 export default async function HomePage() {
@@ -20,7 +20,7 @@ export default async function HomePage() {
         <h1>Startup Directory</h1>
         <p className="hero-copy">
           Y Combinator takes 1%. We back the other 99%.<br />
-          List in Batch 1 — when 3,000 startups join, an 8-hour countdown begins and #1 wins <strong>$30,000 equity-free</strong>.
+          Get discovered by early customers and investors, earn high-authority backlinks, and participate in our $30,000 equity-free Batch 1 grant.
         </p>
         <Link href="/add" className="hero-cta">
           Add your startup
