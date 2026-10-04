@@ -28,6 +28,29 @@ function PasswordRequirement({
   );
 }
 
+function GoogleIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        fill="#4285F4"
+        d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.24v3.15C3.26 21.4 7.34 24 12 24z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.24C.45 8.16 0 9.94 0 12s.45 3.84 1.24 5.42l4.04-3.15z"
+      />
+      <path
+        fill="#EA4335"
+        d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.6 1.24 6.58l4.04 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
+      />
+    </svg>
+  );
+}
+
 function AuthForm() {
   const searchParams = useSearchParams();
   const urlMode = searchParams.get("mode") === "signup" ? "signup" : "login";
@@ -45,6 +68,7 @@ function AuthForm() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -55,6 +79,41 @@ function AuthForm() {
   const hasNumber = /[0-9]/.test(password);
   const passwordsMatch = password === confirmPassword && confirmPassword.length > 0;
   const passwordStrong = hasMinLength && hasUppercase && hasLowercase && hasNumber;
+
+  async function handleGoogleSignIn() {
+    setError(null);
+    setMessage(null);
+    setGoogleLoading(true);
+
+    try {
+      const supabase = createBrowserClient();
+      const redirectUrl =
+        typeof window !== "undefined"
+          ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(
+              redirect || "/dashboard"
+            )}`
+          : "/dashboard";
+
+      const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: redirectUrl,
+        },
+      });
+
+      if (oauthError) throw oauthError;
+      if (data?.url) {
+        window.location.href = data.url;
+      }
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to connect to Google. Please try again."
+      );
+      setGoogleLoading(false);
+    }
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -126,20 +185,81 @@ function AuthForm() {
 
       <div className="page-width narrow">
         <div className="form-card">
-          <form className="add-form" onSubmit={handleSubmit}>
-            {error ? <p className="form-error">{error}</p> : null}
-            {message ? (
-              <p
-                style={{
-                  color: "#16a34a",
-                  fontSize: "14px",
-                  fontWeight: 500,
-                }}
-              >
-                {message}
-              </p>
-            ) : null}
+          {error ? <p className="form-error">{error}</p> : null}
+          {message ? (
+            <p
+              style={{
+                color: "#16a34a",
+                fontSize: "14px",
+                fontWeight: 500,
+                marginBottom: "16px",
+              }}
+            >
+              {message}
+            </p>
+          ) : null}
 
+          {/* Google Sign In Button */}
+          <button
+            type="button"
+            onClick={handleGoogleSignIn}
+            disabled={loading || googleLoading}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "10px",
+              width: "100%",
+              height: "44px",
+              minHeight: "44px",
+              borderRadius: "6px",
+              border: "1px solid var(--search-border)",
+              backgroundColor: "#ffffff",
+              color: "var(--ink)",
+              fontSize: "14px",
+              fontWeight: 500,
+              cursor: loading || googleLoading ? "not-allowed" : "pointer",
+              transition: "all 0.15s ease",
+              boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
+            }}
+          >
+            <GoogleIcon />
+            <span>
+              {googleLoading
+                ? "Connecting to Google..."
+                : mode === "login"
+                ? "Continue with Google"
+                : "Sign up with Google"}
+            </span>
+          </button>
+
+          {/* Divider */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              textAlign: "center",
+              margin: "18px 0",
+              color: "var(--muted)",
+              fontSize: "13px",
+            }}
+          >
+            <div
+              style={{
+                flex: 1,
+                borderBottom: "1px solid var(--line)",
+              }}
+            />
+            <span style={{ padding: "0 12px" }}>or continue with email</span>
+            <div
+              style={{
+                flex: 1,
+                borderBottom: "1px solid var(--line)",
+              }}
+            />
+          </div>
+
+          <form className="add-form" onSubmit={handleSubmit}>
             <label>
               Email address
               <input
