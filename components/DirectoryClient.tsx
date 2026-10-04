@@ -1,15 +1,27 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { Company } from "@/lib/types";
-import { companyAnchor, companyPath, teamSizeNumber } from "@/lib/companies";
+import { companyAnchor } from "@/lib/companies";
 import { INDUSTRY_TAXONOMY, REGION_TAXONOMY, type TaxonomyItem } from "@/lib/options";
+import {
+  companyIndustrySet,
+  companyRegionSet,
+  matchesFilters,
+  teamSize,
+  type DirectoryFilters,
+  type FacetKey,
+} from "@/lib/filters";
 import { CompanyCard } from "./CompanyCard";
+import UpvoteModal from "./UpvoteModal";
+import { createBrowserClient, hasSupabaseConfig } from "@/lib/supabase";
 
-type SortKey = "newest" | "oldest" | "name";
+type SortKey = "top_voted" | "newest" | "oldest" | "name";
+
+const lower = (value: string) => value.trim().toLowerCase();
 
 export function DirectoryClient({ companies }: { companies: Company[] }) {
+  const [companyList, setCompanyList] = useState<Company[]>(companies);
   const [query, setQuery] = useState("");
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const [hiringOnly, setHiringOnly] = useState(false);
@@ -18,11 +30,101 @@ export function DirectoryClient({ companies }: { companies: Company[] }) {
   const [batches, setBatches] = useState<string[]>([]);
   const [industries, setIndustries] = useState<string[]>([]);
   const [regions, setRegions] = useState<string[]>([]);
-  const [sort, setSort] = useState<SortKey>("newest");
+  const [sort, setSort] = useState<SortKey>("top_voted");
   const [filtersOpen, setFiltersOpen] = useState(false);
 
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
+  const [userUpvoteIds, setUserUpvoteIds] = useState<Set<string>>(new Set());
+  const [upvoteModalCompany, setUpvoteModalCompany] = useState<Company | null>(null);
+
+  const isOwnCompany = (comp: Company) => {
+    if (!currentUserId && !currentUserEmail) return false;
+    const emailClean = (currentUserEmail || "").toLowerCase();
+    return Boolean(
+      (comp.user_id && comp.user_id === currentUserId) ||
+      (comp.email && comp.email.toLowerCase() === emailClean) ||
+      (Array.isArray(comp.partner_emails) &&
+        comp.partner_emails.map((e) => e.toLowerCase()).includes(emailClean))
+    );
+  };
+
+  useEffect(() => {
+    setCompanyList(companies);
+  }, [companies]);
+
+  useEffect(() => {
+    if (!hasSupabaseConfig()) return;
+    try {
+      const supabase = createBrowserClient();
+
+      // Fetch live upvote counts directly from Supabase
+      supabase
+        .from("companies")
+        .select("id, upvotes_count")
+        .then(({ data: upvoteData }) => {
+          if (Array.isArray(upvoteData)) {
+            const countMap = new Map(
+              upvoteData.map((item) => [item.id, Number(item.upvotes_count) || 0])
+            );
+            setCompanyList((prev) =>
+              prev.map((c) => {
+                const live = countMap.get(c.id);
+                return live !== undefined ? { ...c, upvotes_count: live } : c;
+              })
+            );
+          }
+        });
+
+      // Subscribe to real-time company updates
+      const channel = supabase
+        .channel("realtime-companies-upvotes")
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "companies" },
+          (payload: any) => {
+            if (payload?.new && payload.new.id) {
+              const updatedId = payload.new.id;
+              const newCount = Number(payload.new.upvotes_count) || 0;
+              setCompanyList((prev) =>
+                prev.map((c) => (c.id === updatedId ? { ...c, upvotes_count: newCount } : c))
+              );
+            }
+          }
+        )
+        .subscribe();
+
+      supabase.auth.getSession().then(({ data }) => {
+        const user = data.session?.user;
+        const token = data.session?.access_token;
+        if (user && token) {
+          setIsLoggedIn(true);
+          setCurrentUserId(user.id);
+          setCurrentUserEmail(user.email ?? null);
+          fetch("/api/user/upvotes", {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+            .then((r) => r.json())
+            .then((res) => {
+              if (Array.isArray(res.upvoted_company_ids)) {
+                setUserUpvoteIds(new Set(res.upvoted_company_ids));
+              }
+            })
+            .catch(() => {});
+        }
+      });
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    } catch {
+      // ignore
+    }
+  }, []);
+
   const maxTeam = useMemo(() => {
-    const sizes = companies.map(teamSizeNumber);
+    const sizes = companies.map(teamSize);
     return Math.max(100, ...sizes, 1);
   }, [companies]);
   const [minSize, setMinSize] = useState(1);
@@ -46,87 +148,67 @@ export function DirectoryClient({ companies }: { companies: Company[] }) {
     });
   }, [companies]);
 
-  const currentBatchNum = Math.max(1, Math.floor(companies.length / 3000) + 1);
-  const batchOptions = useMemo(() => {
-    const existing = sortedUnique(companies.map((c) => c.batch).filter(Boolean));
-    const allExpected: string[] = [];
-    for (let i = 1; i <= currentBatchNum; i += 1) {
-      allExpected.push(`Batch ${i}`);
-    }
-    return sortedUnique([...existing, ...allExpected]);
-  }, [companies, currentBatchNum]);
-  const industryOptions = useMemo(
-    () => sortedUnique(companies.flatMap((c) => c.industries)),
-    [companies],
-  );
-  const regionOptions = useMemo(
-    () => sortedUnique(companies.map((c) => c.hq_region).filter(Boolean)),
-    [companies],
+  // Precompute per-company sets once so counts stay fast while filtering.
+  const facts = useMemo(
+    () =>
+      new Map(
+        companyList.map((c) => [
+          c.id,
+          { industries: companyIndustrySet(c), regions: companyRegionSet(c) },
+        ]),
+      ),
+    [companyList],
   );
 
-  const hiringCount = companies.filter((c) => c.jobs.length > 0).length;
-  const nonprofitCount = companies.filter((c) => c.is_nonprofit).length;
-  const topCompanyCount = companies.filter((c) => c.is_top_company).length;
-  const topCompanies = companies.filter((c) => c.is_top_company);
-
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const rows = companies.filter((c) => {
-      if (hiringOnly && c.jobs.length === 0) return false;
-      if (nonprofitOnly && !c.is_nonprofit) return false;
-      if (topCompaniesOnly && !c.is_top_company) return false;
-      if (batches.includes("__NONE__")) return false;
-      if (batches.length && !batches.includes(c.batch)) return false;
-      if (industries.includes("__NONE__")) return false;
-      if (industries.length) {
-        const matchesIndustry = c.industries.some((tag) => {
-          const lowerTag = tag.toLowerCase();
-          return industries.some((selectedInd) => {
-            const lowerSelected = selectedInd.toLowerCase();
-            if (lowerTag === lowerSelected) return true;
-            const parent = INDUSTRY_TAXONOMY.find(
-              (p) => p.name.toLowerCase() === lowerSelected,
-            );
-            if (parent?.subcategories?.some((sub) => sub.toLowerCase() === lowerTag)) {
-              return true;
-            }
-            return false;
-          });
-        });
-        if (!matchesIndustry) return false;
-      }
-      if (regions.includes("__NONE__")) return false;
-      if (regions.length) {
-        const companyLoc = `${c.hq_region} ${c.location}`.toLowerCase();
-        const matchesRegion = regions.some((selectedReg) => {
-          const lowerSelected = selectedReg.toLowerCase();
-          if (companyLoc.includes(lowerSelected)) return true;
-          const parent = REGION_TAXONOMY.find(
-            (r) => r.name.toLowerCase() === lowerSelected,
-          );
-          if (parent?.subcategories?.some((sub) => companyLoc.includes(sub.toLowerCase()))) {
-            return true;
-          }
-          return false;
-        });
-        if (!matchesRegion) return false;
-      }
-      const size = teamSizeNumber(c);
-      if (size < minSize || size > maxSize) return false;
-      if (!q) return true;
-      return `${c.company_name} ${c.pitch} ${c.description} ${c.website_url} ${c.location} ${c.industries.join(" ")} ${c.batch}`
-        .toLowerCase()
-        .includes(q);
+  const globalRankMap = useMemo(() => {
+    const sorted = [...companyList].sort((a, b) => {
+      const va = a.upvotes_count || 0;
+      const vb = b.upvotes_count || 0;
+      if (vb !== va) return vb - va;
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
 
-    return [...rows].sort((a, b) => {
-      if (sort === "name") return a.company_name.localeCompare(b.company_name);
-      const da = new Date(a.created_at).getTime();
-      const db = new Date(b.created_at).getTime();
-      return sort === "oldest" ? da - db : db - da;
+    const rankMap = new Map<string, number>();
+    sorted.forEach((comp, idx) => {
+      if (idx < 10) {
+        rankMap.set(comp.id, idx + 1);
+      }
     });
+    return rankMap;
+  }, [companyList]);
+
+  const topIds = useMemo(() => new Set(globalRankMap.keys()), [globalRankMap]);
+
+  const filters: DirectoryFilters = {
+    query,
+    hiringOnly,
+    nonprofitOnly,
+    topOnly: topCompaniesOnly,
+    batches,
+    industries,
+    regions,
+    minSize,
+    maxSize,
+    maxTeam,
+    topIds,
+  };
+
+  // Companies that pass every filter except one facet. Option counts in that
+  // facet are computed from this pool, so they update live as you filter.
+  const pools = useMemo(() => {
+    const pool = (except: FacetKey) =>
+      companyList.filter((c) => matchesFilters(c, filters, except));
+    return {
+      top: pool("top"),
+      hiring: pool("hiring"),
+      nonprofit: pool("nonprofit"),
+      batch: pool("batch"),
+      industry: pool("industry"),
+      region: pool("region"),
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    companies,
+    companyList,
     query,
     hiringOnly,
     nonprofitOnly,
@@ -136,8 +218,73 @@ export function DirectoryClient({ companies }: { companies: Company[] }) {
     regions,
     minSize,
     maxSize,
+    maxTeam,
+    topIds,
+  ]);
+
+  const filtered = useMemo(() => {
+    let rows = companyList.filter((c) => matchesFilters(c, filters));
+
+    if (topCompaniesOnly) {
+      rows = rows
+        .sort((a, b) => {
+          const va = a.upvotes_count || 0;
+          const vb = b.upvotes_count || 0;
+          if (vb !== va) return vb - va;
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        })
+        .slice(0, 10);
+      return rows;
+    }
+
+    return rows.sort((a, b) => {
+      if (sort === "top_voted") {
+        const va = a.upvotes_count || 0;
+        const vb = b.upvotes_count || 0;
+        if (vb !== va) return vb - va;
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      }
+      if (sort === "name") return a.company_name.localeCompare(b.company_name);
+      const da = new Date(a.created_at).getTime();
+      const db = new Date(b.created_at).getTime();
+      return sort === "oldest" ? da - db : db - da;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    companyList,
+    query,
+    hiringOnly,
+    nonprofitOnly,
+    topCompaniesOnly,
+    batches,
+    industries,
+    regions,
+    minSize,
+    maxSize,
+    maxTeam,
     sort,
   ]);
+
+  const currentBatchNum = Math.max(1, Math.floor(companies.length / 3000) + 1);
+  const batchOptions = useMemo(() => {
+    const existing = sortedUnique(companies.map((c) => c.batch).filter(Boolean));
+    const allExpected: string[] = [];
+    for (let i = 1; i <= currentBatchNum; i += 1) {
+      allExpected.push(`Batch ${i}`);
+    }
+    return sortBatchNames([...existing, ...allExpected]);
+  }, [companies, currentBatchNum]);
+
+  const hiringCount = pools.hiring.filter((c) => c.jobs.length > 0).length;
+  const nonprofitCount = pools.nonprofit.filter((c) => c.is_nonprofit).length;
+  const topCompanyCount = Math.min(10, pools.top.length);
+
+  const countIn = (pool: Company[], key: "industries" | "regions", name: string) => {
+    const target = lower(name);
+    let n = 0;
+    for (const c of pool) if (facts.get(c.id)?.[key].has(target)) n += 1;
+    return n;
+  };
 
   const filterPanel = (
     <aside className="filter-panel" aria-label="Filters">
@@ -174,9 +321,9 @@ export function DirectoryClient({ companies }: { companies: Company[] }) {
       <CollapsibleFilterGroup
         title="Batch"
         allLabel="All batches"
-        allCount={companies.length}
+        allCount={pools.batch.length}
         options={batchOptions.map((name) => {
-          const count = companies.filter((c) => c.batch === name).length;
+          const count = pools.batch.filter((c) => c.batch === name).length;
           return {
             name,
             countLabel: `${count} / 3,000`,
@@ -190,53 +337,21 @@ export function DirectoryClient({ companies }: { companies: Company[] }) {
       <HierarchicalTaxonomyFilterGroup
         title="Industry"
         allLabel="All industries"
-        allCount={companies.length}
+        allCount={pools.industry.length}
         taxonomy={INDUSTRY_TAXONOMY}
         selected={industries}
         onChange={setIndustries}
-        getCategoryCount={(catName) =>
-          companies.filter((c) =>
-            c.industries.some((tag) => {
-              const lowerTag = tag.toLowerCase();
-              if (lowerTag === catName.toLowerCase()) return true;
-              const subcats =
-                INDUSTRY_TAXONOMY.find(
-                  (i) => i.name.toLowerCase() === catName.toLowerCase(),
-                )?.subcategories ?? [];
-              return subcats.some((sub) => sub.toLowerCase() === lowerTag);
-            }),
-          ).length
-        }
-        getSubcategoryCount={(subName) =>
-          companies.filter((c) =>
-            c.industries.some((tag) => tag.toLowerCase() === subName.toLowerCase()),
-          ).length
-        }
+        getCount={(name) => countIn(pools.industry, "industries", name)}
         defaultOpen={true}
       />
       <HierarchicalTaxonomyFilterGroup
         title="HQ Region"
         allLabel="Anywhere"
-        allCount={companies.length}
+        allCount={pools.region.length}
         taxonomy={REGION_TAXONOMY}
         selected={regions}
         onChange={setRegions}
-        getCategoryCount={(catName) =>
-          companies.filter((c) => {
-            const loc = `${c.hq_region} ${c.location}`.toLowerCase();
-            if (loc.includes(catName.toLowerCase())) return true;
-            const subcats =
-              REGION_TAXONOMY.find(
-                (r) => r.name.toLowerCase() === catName.toLowerCase(),
-              )?.subcategories ?? [];
-            return subcats.some((sub) => loc.includes(sub.toLowerCase()));
-          }).length
-        }
-        getSubcategoryCount={(subName) =>
-          companies.filter((c) =>
-            `${c.hq_region} ${c.location}`.toLowerCase().includes(subName.toLowerCase()),
-          ).length
-        }
+        getCount={(name) => countIn(pools.region, "regions", name)}
         defaultOpen={true}
       />
 
@@ -259,6 +374,7 @@ export function DirectoryClient({ companies }: { companies: Company[] }) {
             max={maxTeam}
             value={minSize}
             className="yc-range-thumb thumb-min"
+            aria-label="Minimum team size"
             onChange={(e) => {
               const val = Math.min(Number(e.target.value), maxSize);
               setMinSize(val);
@@ -270,6 +386,7 @@ export function DirectoryClient({ companies }: { companies: Company[] }) {
             max={maxTeam}
             value={maxSize}
             className="yc-range-thumb thumb-max"
+            aria-label="Maximum team size"
             onChange={(e) => {
               const val = Math.max(Number(e.target.value), minSize);
               setMaxSize(val);
@@ -281,59 +398,35 @@ export function DirectoryClient({ companies }: { companies: Company[] }) {
   );
 
   const activeFilters = [
-    ...batches
-      .filter((b) => b !== "__NONE__" && b !== "All batches")
-      .map((b) => ({
-        key: `batch-${b}`,
-        label: b,
-        onRemove: () => setBatches(batches.filter((item) => item !== b)),
-      })),
-    ...industries
-      .filter((ind) => ind !== "__NONE__" && ind !== "All industries")
-      .map((ind) => ({
-        key: `ind-${ind}`,
-        label: ind,
-        onRemove: () => setIndustries(industries.filter((item) => item !== ind)),
-      })),
-    ...regions
-      .filter((reg) => reg !== "__NONE__" && reg !== "Anywhere")
-      .map((reg) => ({
-        key: `reg-${reg}`,
-        label: reg,
-        onRemove: () => setRegions(regions.filter((item) => item !== reg)),
-      })),
+    ...batches.map((b) => ({
+      key: `batch-${b}`,
+      label: b,
+      onRemove: () => setBatches(batches.filter((item) => item !== b)),
+    })),
+    ...industries.map((ind) => ({
+      key: `ind-${ind}`,
+      label: ind,
+      onRemove: () => setIndustries(industries.filter((item) => item !== ind)),
+    })),
+    ...regions.map((reg) => ({
+      key: `reg-${reg}`,
+      label: reg,
+      onRemove: () => setRegions(regions.filter((item) => item !== reg)),
+    })),
     ...(hiringOnly
-      ? [
-          {
-            key: "hiring",
-            label: "Is Hiring",
-            onRemove: () => setHiringOnly(false),
-          },
-        ]
+      ? [{ key: "hiring", label: "Is Hiring", onRemove: () => setHiringOnly(false) }]
       : []),
     ...(nonprofitOnly
-      ? [
-          {
-            key: "nonprofit",
-            label: "Nonprofit",
-            onRemove: () => setNonprofitOnly(false),
-          },
-        ]
+      ? [{ key: "nonprofit", label: "Nonprofit", onRemove: () => setNonprofitOnly(false) }]
       : []),
     ...(topCompaniesOnly
-      ? [
-          {
-            key: "top",
-            label: "Top Companies",
-            onRemove: () => setTopCompaniesOnly(false),
-          },
-        ]
+      ? [{ key: "top", label: "Top Companies", onRemove: () => setTopCompaniesOnly(false) }]
       : []),
     ...(minSize > 1 || maxSize < maxTeam
       ? [
           {
             key: "size",
-            label: `Size: ${minSize} - ${maxSize}+`,
+            label: `Size: ${minSize} - ${maxSize >= maxTeam ? `${maxTeam}+` : maxSize}`,
             onRemove: () => {
               setMinSize(1);
               setMaxSize(maxTeam);
@@ -341,24 +434,32 @@ export function DirectoryClient({ companies }: { companies: Company[] }) {
           },
         ]
       : []),
+    ...(query.trim()
+      ? [{ key: "query", label: `“${query.trim()}”`, onRemove: () => setQuery("") }]
+      : []),
   ];
+
+  function clearAll() {
+    setBatches([]);
+    setIndustries([]);
+    setRegions([]);
+    setHiringOnly(false);
+    setNonprofitOnly(false);
+    setTopCompaniesOnly(false);
+    setMinSize(1);
+    setMaxSize(maxTeam);
+    setQuery("");
+  }
 
   return (
     <div className="directory-shell">
-      <button
-        type="button"
-        className="filter-toggle"
-        onClick={() => setFiltersOpen(true)}
-      >
-        Filters
-      </button>
       <div className="filters-desktop">{filterPanel}</div>
       {filtersOpen ? (
         <div className="filters-drawer">
           <div className="filters-drawer-bar">
             <strong>Filters</strong>
             <button type="button" onClick={() => setFiltersOpen(false)}>
-              Done
+              Show {filtered.length} results
             </button>
           </div>
           {filterPanel}
@@ -384,6 +485,7 @@ export function DirectoryClient({ companies }: { companies: Company[] }) {
             </svg>
             <input
               className="search-input"
+              type="search"
               placeholder="Search..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -400,17 +502,32 @@ export function DirectoryClient({ companies }: { companies: Company[] }) {
             ) : null}
           </div>
 
-          <label className="sort-label">
-            <span className="sort-by-text">Sort by</span>
-            <select
-              value={sort}
-              onChange={(e) => setSort(e.target.value as SortKey)}
+          <div className="directory-controls-row">
+            <button
+              type="button"
+              className="filter-toggle"
+              onClick={() => setFiltersOpen(true)}
+              aria-label="Open directory filters"
             >
-              <option value="newest">Default (Newest)</option>
-              <option value="oldest">Oldest</option>
-              <option value="name">Name (A-Z)</option>
-            </select>
-          </label>
+              <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <path d="M3 5h14M6 10h8M8 15h4" strokeLinecap="round" />
+              </svg>
+              <span>Filters{activeFilters.length > 0 ? ` (${activeFilters.length})` : ""}</span>
+            </button>
+
+            <label className="sort-label">
+              <span className="sort-by-text">Sort by</span>
+              <select
+                value={sort}
+                onChange={(e) => setSort(e.target.value as SortKey)}
+              >
+                <option value="top_voted">Top Voted</option>
+                <option value="newest">Newest First</option>
+                <option value="oldest">Oldest First</option>
+                <option value="name">Name (A-Z)</option>
+              </select>
+            </label>
+          </div>
         </div>
 
         {activeFilters.length > 0 ? (
@@ -426,47 +543,75 @@ export function DirectoryClient({ companies }: { companies: Company[] }) {
                 {f.label} <span className="pill-remove">✕</span>
               </button>
             ))}
-            <button
-              type="button"
-              className="clear-all-filters"
-              onClick={() => {
-                setBatches([]);
-                setIndustries([]);
-                setRegions([]);
-                setHiringOnly(false);
-                setNonprofitOnly(false);
-                setTopCompaniesOnly(false);
-                setMinSize(1);
-                setMaxSize(maxTeam);
-                setQuery("");
-              }}
-            >
+            <button type="button" className="clear-all-filters" onClick={clearAll}>
               Clear all
             </button>
           </div>
         ) : null}
 
-        <p className="showing">
+        <p className="showing" aria-live="polite">
           Showing {filtered.length} of {companies.length} companies
         </p>
         <div className="results-box">
           {filtered.length === 0 ? (
             <div className="empty-state">
-              {companies.length === 0
-                ? "No companies yet. Pay $20 and be the first listing."
-                : "No companies match those filters."}
+              {companies.length === 0 ? (
+                "No companies yet. Pay $20 and be the first listing."
+              ) : (
+                <>
+                  No companies match those filters.{" "}
+                  <button type="button" className="clear-all-filters" onClick={clearAll}>
+                    Clear all filters
+                  </button>
+                </>
+              )}
             </div>
           ) : (
-            filtered.map((company) => (
-              <CompanyCard
-                key={company.id}
-                company={company}
-                highlighted={highlightId === company.id}
-              />
-            ))
+            filtered.map((company) => {
+              const rank = globalRankMap.get(company.id);
+
+              return (
+                <CompanyCard
+                  key={company.id}
+                  company={company}
+                  highlighted={highlightId === company.id}
+                  rank={rank}
+                  onUpvoteClick={(c) => setUpvoteModalCompany(c)}
+                  hasUpvoted={userUpvoteIds.has(company.id)}
+                  isOwnCompany={isOwnCompany(company)}
+                />
+              );
+            })
           )}
         </div>
       </section>
+
+      {upvoteModalCompany && (
+        <UpvoteModal
+          isOpen={Boolean(upvoteModalCompany)}
+          onClose={() => setUpvoteModalCompany(null)}
+          company={upvoteModalCompany}
+          hasUpvoted={userUpvoteIds.has(upvoteModalCompany.id)}
+          isOwnCompany={isOwnCompany(upvoteModalCompany)}
+          isLoggedIn={isLoggedIn}
+          onUpvoteSuccess={(newCount, hasUpvoted) => {
+            setCompanyList((prev) =>
+              prev.map((c) =>
+                c.id === upvoteModalCompany.id ? { ...c, upvotes_count: newCount } : c
+              )
+            );
+            setUserUpvoteIds((prev) => {
+              const next = new Set(prev);
+              if (hasUpvoted) {
+                next.add(upvoteModalCompany.id);
+              } else {
+                next.delete(upvoteModalCompany.id);
+              }
+              return next;
+            });
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -479,6 +624,7 @@ function CollapsibleFilterGroup({
   selected,
   onChange,
   defaultOpen = false,
+  limit = 6,
 }: {
   title: string;
   allLabel: string;
@@ -487,23 +633,21 @@ function CollapsibleFilterGroup({
   selected: string[];
   onChange: (next: string[]) => void;
   defaultOpen?: boolean;
+  limit?: number;
 }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
-  const isNone = selected.includes("__NONE__");
+  const [showAll, setShowAll] = useState(false);
   const allOn = selected.length === 0;
 
-  function toggleAll() {
-    if (allOn) {
-      onChange(["__NONE__"]);
-    } else {
-      onChange([]);
+  // Auto-expand if a selected option is beyond the default limit
+  useEffect(() => {
+    if (options.slice(limit).some((opt) => selected.includes(opt.name))) {
+      setShowAll(true);
     }
-  }
+  }, [options, selected, limit]);
 
-  function toggleItem(name: string) {
-    const clean = selected.filter((x) => x !== "__NONE__");
-    onChange(toggleValue(clean, name));
-  }
+  const hasMore = options.length > limit;
+  const visibleOptions = showAll || !hasMore ? options : options.slice(0, limit);
 
   return (
     <div className="filter-section">
@@ -523,23 +667,99 @@ function CollapsibleFilterGroup({
             <input
               type="checkbox"
               checked={allOn}
-              onChange={toggleAll}
+              // "All" just clears the selection; it never hides everything.
+              onChange={() => onChange([])}
             />
             <span>{allLabel}</span>
             <em>{allCount}</em>
           </label>
-          {options.map((option) => (
-            <label className="check-row" key={option.name}>
+          {visibleOptions.map((option) => (
+            <label
+              className={`check-row${option.count === 0 && !selected.includes(option.name) ? " is-empty" : ""}`}
+              key={option.name}
+            >
               <input
                 type="checkbox"
-                checked={!isNone && selected.includes(option.name)}
-                onChange={() => toggleItem(option.name)}
+                checked={selected.includes(option.name)}
+                onChange={() => onChange(toggleValue(selected, option.name))}
               />
               <span>{option.name}</span>
               <em>{option.countLabel ?? option.count}</em>
             </label>
           ))}
+          {hasMore ? (
+            <button
+              type="button"
+              className="filter-see-more-btn"
+              onClick={() => setShowAll((prev) => !prev)}
+            >
+              {showAll ? "See fewer options" : "See all options"}
+            </button>
+          ) : null}
         </div>
+      ) : null}
+    </div>
+  );
+}
+
+function TaxonomySubList({
+  subs,
+  parent,
+  selected,
+  parentChecked,
+  getCount,
+  toggleSub,
+  subLimit = 6,
+}: {
+  subs: string[];
+  parent: TaxonomyItem;
+  selected: string[];
+  parentChecked: boolean;
+  getCount: (name: string) => number;
+  toggleSub: (parent: TaxonomyItem, sub: string) => void;
+  subLimit?: number;
+}) {
+  const [showAllSubs, setShowAllSubs] = useState(false);
+  const hasMoreSubs = subs.length > subLimit;
+
+  useEffect(() => {
+    if (subs.slice(subLimit).some((s) => selected.includes(s))) {
+      setShowAllSubs(true);
+    }
+  }, [subs, selected, subLimit]);
+
+  const visibleSubs = showAllSubs || !hasMoreSubs ? subs : subs.slice(0, subLimit);
+
+  return (
+    <div className="taxonomy-sub-list">
+      {visibleSubs.map((sub) => {
+        const subChecked = parentChecked || selected.includes(sub);
+        const subCount = getCount(sub);
+
+        return (
+          <label
+            className={`check-row check-row-sub${subCount === 0 && !subChecked ? " is-empty" : ""}`}
+            key={sub}
+          >
+            <input
+              type="checkbox"
+              checked={subChecked}
+              onChange={() => toggleSub(parent, sub)}
+            />
+            <span>{sub}</span>
+            <em>{subCount}</em>
+          </label>
+        );
+      })}
+
+      {hasMoreSubs ? (
+        <button
+          type="button"
+          className="filter-see-more-btn filter-see-more-sub"
+          onClick={() => setShowAllSubs((prev) => !prev)}
+        >
+          {showAllSubs ? "See fewer options" : "See all options"}
+        </button>
       ) : null}
     </div>
   );
@@ -552,9 +772,9 @@ function HierarchicalTaxonomyFilterGroup({
   taxonomy,
   selected,
   onChange,
-  getCategoryCount,
-  getSubcategoryCount,
+  getCount,
   defaultOpen = true,
+  limit = 6,
 }: {
   title: string;
   allLabel: string;
@@ -562,26 +782,44 @@ function HierarchicalTaxonomyFilterGroup({
   taxonomy: TaxonomyItem[];
   selected: string[];
   onChange: (next: string[]) => void;
-  getCategoryCount: (catName: string) => number;
-  getSubcategoryCount: (subName: string) => number;
+  getCount: (name: string) => number;
   defaultOpen?: boolean;
+  limit?: number;
 }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
+  const [showAll, setShowAll] = useState(false);
   const [expandedParents, setExpandedParents] = useState<string[]>([]);
-  const isNone = selected.includes("__NONE__");
   const allOn = selected.length === 0;
 
-  function toggleAll() {
-    if (allOn) {
-      onChange(["__NONE__"]);
+  useEffect(() => {
+    const hiddenItems = taxonomy.slice(limit);
+    const hasSelectedInHidden = hiddenItems.some((item) => {
+      if (selected.includes(item.name)) return true;
+      return (item.subcategories ?? []).some((s) => selected.includes(s));
+    });
+    if (hasSelectedInHidden) {
+      setShowAll(true);
+    }
+  }, [taxonomy, selected, limit]);
+
+  function toggleParent(item: TaxonomyItem) {
+    const subs = item.subcategories ?? [];
+    if (selected.includes(item.name)) {
+      onChange(selected.filter((x) => x !== item.name));
     } else {
-      onChange([]);
+      // Parent already covers its subcategories, so drop redundant children.
+      onChange([...selected.filter((x) => !subs.includes(x)), item.name]);
     }
   }
 
-  function toggleItem(name: string) {
-    const clean = selected.filter((x) => x !== "__NONE__");
-    onChange(toggleValue(clean, name));
+  function toggleSub(parent: TaxonomyItem, sub: string) {
+    if (selected.includes(parent.name)) {
+      // Unticking one child of a fully-selected parent: keep the siblings.
+      const siblings = (parent.subcategories ?? []).filter((s) => s !== sub);
+      onChange([...selected.filter((x) => x !== parent.name), ...siblings]);
+      return;
+    }
+    onChange(toggleValue(selected, sub));
   }
 
   function toggleParentExpanded(name: string) {
@@ -589,6 +827,9 @@ function HierarchicalTaxonomyFilterGroup({
       current.includes(name) ? current.filter((x) => x !== name) : [...current, name],
     );
   }
+
+  const hasMore = taxonomy.length > limit;
+  const visibleTaxonomy = showAll || !hasMore ? taxonomy : taxonomy.slice(0, limit);
 
   return (
     <div className="filter-section">
@@ -605,24 +846,22 @@ function HierarchicalTaxonomyFilterGroup({
       {isOpen ? (
         <div className="filter-group-content">
           <label className="check-row">
-            <input
-              type="checkbox"
-              checked={allOn}
-              onChange={toggleAll}
-            />
+            <input type="checkbox" checked={allOn} onChange={() => onChange([])} />
             <span>{allLabel}</span>
             <em>{allCount}</em>
           </label>
 
-          {taxonomy.map((item) => {
-            const hasSub = (item.subcategories?.length ?? 0) > 0;
-            const isExpanded = expandedParents.includes(item.name);
-            const parentChecked = !isNone && selected.includes(item.name);
-            const catCount = getCategoryCount(item.name);
+          {visibleTaxonomy.map((item) => {
+            const subs = item.subcategories ?? [];
+            const hasSub = subs.length > 0;
+            const parentChecked = selected.includes(item.name);
+            const someSubsChecked = !parentChecked && subs.some((s) => selected.includes(s));
+            const isExpanded = expandedParents.includes(item.name) || someSubsChecked;
+            const catCount = getCount(item.name);
 
             return (
               <div key={item.name} className="taxonomy-item-block">
-                <div className="check-row check-row-main">
+                <div className={`check-row check-row-main${catCount === 0 && !parentChecked ? " is-empty" : ""}`}>
                   {hasSub ? (
                     <button
                       type="button"
@@ -638,35 +877,39 @@ function HierarchicalTaxonomyFilterGroup({
                   <input
                     type="checkbox"
                     checked={parentChecked}
-                    onChange={() => toggleItem(item.name)}
+                    ref={(el) => {
+                      if (el) el.indeterminate = someSubsChecked;
+                    }}
+                    onChange={() => toggleParent(item)}
+                    aria-label={item.name}
                   />
                   <span>{item.name}</span>
                   <em>{catCount}</em>
                 </div>
 
                 {hasSub && isExpanded ? (
-                  <div className="taxonomy-sub-list">
-                    {item.subcategories!.map((sub) => {
-                      const subChecked = !isNone && selected.includes(sub);
-                      const subCount = getSubcategoryCount(sub);
-
-                      return (
-                        <label className="check-row check-row-sub" key={sub}>
-                          <input
-                            type="checkbox"
-                            checked={subChecked}
-                            onChange={() => toggleItem(sub)}
-                          />
-                          <span>{sub}</span>
-                          <em>{subCount}</em>
-                        </label>
-                      );
-                    })}
-                  </div>
+                  <TaxonomySubList
+                    subs={subs}
+                    parent={item}
+                    selected={selected}
+                    parentChecked={parentChecked}
+                    getCount={getCount}
+                    toggleSub={toggleSub}
+                  />
                 ) : null}
               </div>
             );
           })}
+
+          {hasMore ? (
+            <button
+              type="button"
+              className="filter-see-more-btn"
+              onClick={() => setShowAll((prev) => !prev)}
+            >
+              {showAll ? "See fewer options" : "See all options"}
+            </button>
+          ) : null}
         </div>
       ) : null}
     </div>
@@ -681,4 +924,17 @@ function sortedUnique(values: string[]): string[] {
   return [...new Set(values.map((value) => value.trim()).filter(Boolean))].sort((a, b) =>
     a.localeCompare(b),
   );
+}
+
+function sortBatchNames(batches: string[]): string[] {
+  return [...new Set(batches.map((value) => value.trim()).filter(Boolean))].sort((a, b) => {
+    const matchA = a.match(/^Batch\s+(\d+)$/i);
+    const matchB = b.match(/^Batch\s+(\d+)$/i);
+    if (matchA && matchB) {
+      return parseInt(matchA[1], 10) - parseInt(matchB[1], 10);
+    }
+    if (matchA) return -1;
+    if (matchB) return 1;
+    return a.localeCompare(b);
+  });
 }

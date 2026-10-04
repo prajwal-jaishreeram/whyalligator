@@ -1,4 +1,4 @@
-import type { Founder, Job, ListingPayload } from "./types";
+import type { Founder, Job, ListingPayload, SocialLink } from "./types";
 import { normalizeWebsite } from "./validation";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -10,11 +10,46 @@ export function optionalUrl(value: string): string {
 }
 
 export function parseIndustries(raw: string): string[] {
-  return raw
+  const trimmed = raw.trim();
+  if (!trimmed) return [];
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (Array.isArray(parsed)) {
+      return parsed.map((p) => String(p).trim()).filter(Boolean).slice(0, 3);
+    }
+  } catch {}
+
+  let processed = trimmed;
+  const COMMA_CATEGORIES = [
+    "Engineering, Product and Design",
+    "Travel, Leisure and Tourism",
+  ];
+  for (const cat of COMMA_CATEGORIES) {
+    processed = processed.replace(new RegExp(cat, "gi"), cat.replace(/,/g, "___COMMA___"));
+  }
+
+  return processed
     .split(",")
-    .map((part) => part.trim())
+    .map((part) => part.replace(/___COMMA___/g, ",").trim())
     .filter(Boolean)
-    .slice(0, 8);
+    .slice(0, 3);
+}
+
+export function parsePartnerEmails(raw: string, excludeEmail?: string): string[] {
+  const normalizedExclude = (excludeEmail ?? "").trim().toLowerCase();
+  const seen = new Set<string>();
+  const emails: string[] = [];
+
+  for (const item of raw.split(/[\s,]+/)) {
+    const cleaned = item.trim().toLowerCase();
+    if (!cleaned) continue;
+    if (EMAIL_PATTERN.test(cleaned) && cleaned !== normalizedExclude && !seen.has(cleaned)) {
+      seen.add(cleaned);
+      emails.push(cleaned);
+    }
+  }
+
+  return emails.slice(0, 10);
 }
 
 export function parseListingForm(form: FormData): {
@@ -38,7 +73,26 @@ export function parseListingForm(form: FormData): {
   const primary_partner = String(form.get("primary_partner") ?? "").trim();
   const hq_region = String(form.get("hq_region") ?? "").trim() || "Remote";
   const is_nonprofit = form.get("is_nonprofit") === "on";
-  const is_top_company = false;
+  const rawPartnerEmails = String(form.get("partner_emails") ?? "");
+  const partner_emails = parsePartnerEmails(rawPartnerEmails, email);
+
+  let extra_links: SocialLink[] = [];
+  try {
+    const rawExtra = form.get("extra_links");
+    if (rawExtra && typeof rawExtra === "string") {
+      const parsed = JSON.parse(rawExtra);
+      if (Array.isArray(parsed)) {
+        extra_links = parsed
+          .filter((item) => item && typeof item.url === "string" && item.url.trim())
+          .map((item) => ({
+            platform: String(item.platform || "custom").trim().toLowerCase(),
+            url: optionalUrl(String(item.url || "")),
+            label: String(item.label || "").trim(),
+          }))
+          .filter((item) => /^https?:\/\/.+/i.test(item.url));
+      }
+    }
+  } catch {}
 
   if (company_name.length < 2 || company_name.length > 80) {
     return empty("Company name must be between 2 and 80 characters.");
@@ -137,7 +191,9 @@ export function parseListingForm(form: FormData): {
       jobs,
       hq_region,
       is_nonprofit,
-      is_top_company,
+      is_top_company: false,
+      partner_emails,
+      extra_links,
     },
   };
 }
@@ -150,6 +206,7 @@ function empty(error: string): { payload: ListingPayload; error: string } {
       pitch: "",
       website_url: "",
       email: "",
+      partner_emails: [],
       description: "",
       location: "",
       founded_year: "",

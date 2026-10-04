@@ -2,7 +2,7 @@ import { hasSupabaseConfig, createAnonClient } from "./supabase";
 import type { Company, Job } from "./types";
 
 const SELECT_FIELDS =
-  "id, slug, company_name, pitch, description, website_url, logo_url, email, location, founded_year, team_size, batch, activity_status, industries, linkedin_url, twitter_url, primary_partner, founders, jobs, hq_region, is_nonprofit, is_top_company, created_at, status, user_id";
+  "id, slug, company_name, pitch, description, website_url, logo_url, email, location, founded_year, team_size, batch, activity_status, industries, linkedin_url, twitter_url, primary_partner, founders, jobs, hq_region, is_nonprofit, is_top_company, created_at, status, user_id, upvotes_count";
 
 function normalizeCompany(
   row: Partial<Company> & { id: string; company_name: string },
@@ -33,6 +33,7 @@ function normalizeCompany(
     created_at: row.created_at || new Date().toISOString(),
     status: "live",
     user_id: row.user_id ?? null,
+    upvotes_count: Number(row.upvotes_count) || 0,
   };
 }
 

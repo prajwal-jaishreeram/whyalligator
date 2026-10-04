@@ -149,6 +149,22 @@ function AuthForm() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="founder@example.com"
                 autoComplete="email"
+                className="auth-input-field"
+                style={{
+                  display: "block",
+                  width: "100%",
+                  height: "44px",
+                  minHeight: "44px",
+                  maxHeight: "44px",
+                  boxSizing: "border-box",
+                  padding: "10px 14px",
+                  fontSize: "15px",
+                  lineHeight: "normal",
+                  borderRadius: "6px",
+                  border: "1px solid var(--search-border)",
+                  backgroundColor: "#ffffff",
+                  color: "var(--ink)",
+                }}
               />
             </label>
 
@@ -164,6 +180,22 @@ function AuthForm() {
                 autoComplete={
                   mode === "login" ? "current-password" : "new-password"
                 }
+                className="auth-input-field"
+                style={{
+                  display: "block",
+                  width: "100%",
+                  height: "44px",
+                  minHeight: "44px",
+                  maxHeight: "44px",
+                  boxSizing: "border-box",
+                  padding: "10px 14px",
+                  fontSize: "15px",
+                  lineHeight: "normal",
+                  borderRadius: "6px",
+                  border: "1px solid var(--search-border)",
+                  backgroundColor: "#ffffff",
+                  color: "var(--ink)",
+                }}
               />
             </label>
 
@@ -204,6 +236,22 @@ function AuthForm() {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="••••••••"
                   autoComplete="new-password"
+                  className="auth-input-field"
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    height: "44px",
+                    minHeight: "44px",
+                    maxHeight: "44px",
+                    boxSizing: "border-box",
+                    padding: "10px 14px",
+                    fontSize: "15px",
+                    lineHeight: "normal",
+                    borderRadius: "6px",
+                    border: "1px solid var(--search-border)",
+                    backgroundColor: "#ffffff",
+                    color: "var(--ink)",
+                  }}
                 />
                 {confirmPassword.length > 0 ? (
                   <span

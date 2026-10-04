@@ -26,7 +26,7 @@ export default function PrivacyPage() {
           email.
         </li>
         <li>
-          Payment confirmation from Stripe (we do not store full card numbers).
+          Payment confirmation from Dodo Payments (we do not store full card numbers).
         </li>
         <li>
           Basic server logs such as IP address, browser type, and pages viewed,
@@ -47,7 +47,7 @@ export default function PrivacyPage() {
       </p>
       <h2>Processors</h2>
       <p>
-        We use Supabase to store listings and files, Stripe to take the $20
+        We use Supabase to store listings and files, Dodo Payments to take the $20
         payment, Resend to send confirmation email, and Cloudflare to host the
         site. Each processor has its own privacy terms.
       </p>

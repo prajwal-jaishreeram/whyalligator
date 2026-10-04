@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import type Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase";
-import { getStripe } from "@/lib/stripe";
+import { verifyWebhook } from "@/lib/dodo";
 import { sendListingConfirmation } from "@/lib/email";
 import { getBatchName, siteUrl } from "@/lib/companies";
 import { slugify, uniqueSlug } from "@/lib/slug";
@@ -10,50 +9,62 @@ import type { ListingPayload } from "@/lib/types";
 
 export const runtime = "nodejs";
 
+type DodoWebhookEvent = {
+  type: string;
+  data?: {
+    payment_id?: string;
+    status?: string;
+    metadata?: Record<string, string>;
+  };
+};
+
 export async function POST(request: Request) {
-  const secret = process.env.STRIPE_WEBHOOK_SECRET;
-  if (!secret) {
+  if (!process.env.DODO_PAYMENTS_WEBHOOK_SECRET) {
     return NextResponse.json(
-      { error: "Missing STRIPE_WEBHOOK_SECRET" },
+      { error: "Missing DODO_PAYMENTS_WEBHOOK_SECRET" },
       { status: 500 },
     );
   }
 
-  const signature = request.headers.get("stripe-signature");
-  if (!signature) {
-    return NextResponse.json({ error: "Missing signature" }, { status: 400 });
-  }
-
   const rawBody = await request.text();
-  const stripe = getStripe();
 
-  let event: Stripe.Event;
+  let valid = false;
   try {
-    event = stripe.webhooks.constructEvent(rawBody, signature, secret);
+    valid = await verifyWebhook(rawBody, request.headers);
   } catch (error) {
     console.error(error);
-    return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
+  }
+  if (!valid) {
+    return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 
-  if (event.type !== "checkout.session.completed") {
+  let event: DodoWebhookEvent;
+  try {
+    event = JSON.parse(rawBody) as DodoWebhookEvent;
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  if (event.type !== "payment.succeeded") {
     return NextResponse.json({ received: true });
   }
 
-  const session = event.data.object as Stripe.Checkout.Session;
-  if (
-    session.payment_status !== "paid" &&
-    session.payment_status !== "no_payment_required"
-  ) {
+  const paymentId = event.data?.payment_id?.trim();
+  if (!paymentId) {
+    return NextResponse.json({ error: "Missing payment_id" }, { status: 400 });
+  }
+  if (event.data?.status && event.data.status !== "succeeded") {
     return NextResponse.json({ received: true, skipped: "unpaid" });
   }
 
   const supabase = createAdminClient();
-  const pendingId = session.metadata?.pending_id?.trim();
+  const pendingId = event.data?.metadata?.pending_id?.trim();
 
+  // Idempotency: Dodo may retry the same event.
   const { data: existing } = await supabase
     .from("companies")
     .select("id, slug")
-    .eq("stripe_session_id", session.id)
+    .eq("payment_id", paymentId)
     .maybeSingle();
   if (existing) {
     return NextResponse.json({ received: true, id: existing.id, slug: existing.slug });
@@ -89,7 +100,7 @@ export async function POST(request: Request) {
   const { count: currentTotal } = await supabase
     .from("companies")
     .select("*", { count: "exact", head: true });
-  
+
   const assignedBatch = payload.batch && payload.batch !== "The Other 99%"
     ? payload.batch
     : getBatchName(currentTotal ?? 0);
@@ -97,7 +108,7 @@ export async function POST(request: Request) {
   const { data, error } = await supabase
     .from("companies")
     .insert({
-      stripe_session_id: session.id,
+      payment_id: paymentId,
       slug,
       company_name: payload.company_name,
       pitch: payload.pitch,
@@ -119,6 +130,9 @@ export async function POST(request: Request) {
       hq_region: payload.hq_region,
       is_nonprofit: payload.is_nonprofit,
       is_top_company: false,
+      user_id: payload.user_id ?? null,
+      partner_emails: payload.partner_emails ?? [],
+      extra_links: payload.extra_links ?? [],
       status: "live",
     })
     .select("id, slug")

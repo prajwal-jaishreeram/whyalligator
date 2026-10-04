@@ -11,7 +11,7 @@ export function Footer() {
         </div>
 
         <div className="footer-cols">
-          <div>
+          <div className="footer-col-programs">
             <h3>Programs</h3>
             <ul>
               <li>
@@ -28,7 +28,7 @@ export function Footer() {
               </li>
             </ul>
           </div>
-          <div>
+          <div className="footer-col-resources">
             <h3>Resources</h3>
             <ul>
               <li>
@@ -45,7 +45,7 @@ export function Footer() {
               </li>
             </ul>
           </div>
-          <div>
+          <div className="footer-col-company">
             <h3>Company</h3>
             <ul>
               <li>

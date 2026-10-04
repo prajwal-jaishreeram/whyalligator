@@ -47,8 +47,13 @@ alter table public.companies add column if not exists jobs jsonb not null defaul
 alter table public.companies add column if not exists hq_region text not null default 'Remote';
 alter table public.companies add column if not exists is_nonprofit boolean not null default false;
 alter table public.companies add column if not exists is_top_company boolean not null default false;
+alter table public.companies add column if not exists extra_links jsonb not null default '[]'::jsonb;
 
 create unique index if not exists companies_slug_idx on public.companies (slug);
+
+-- Dodo Payments payment id (idempotency key for the webhook).
+alter table public.companies add column if not exists payment_id text;
+create unique index if not exists companies_payment_id_idx on public.companies (payment_id);
 create index if not exists companies_created_at_idx on public.companies (created_at desc);
 
 create table if not exists public.pending_listings (

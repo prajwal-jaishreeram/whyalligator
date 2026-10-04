@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase";
-import { getStripe, LISTING_PRICE_CENTS } from "@/lib/stripe";
+import { createCheckoutSession } from "@/lib/dodo";
 import { siteUrl } from "@/lib/companies";
 import { parseListingForm } from "@/lib/listing";
 import { uploadPublicImage } from "@/lib/storage";
@@ -27,9 +27,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: logoUpload.error }, { status: 400 });
     }
 
+    let userId: string | null = null;
+    const authHeader = request.headers.get("authorization");
+    if (authHeader && authHeader.toLowerCase().startsWith("bearer ")) {
+      const token = authHeader.replace(/^bearer\s+/i, "").trim();
+      const { data: userData } = await supabase.auth.getUser(token);
+      if (userData?.user?.id) {
+        userId = userData.user.id;
+      }
+    }
+    if (!userId && form.get("user_id")) {
+      userId = String(form.get("user_id")).trim() || null;
+    }
+
     const payload: ListingPayload = {
       ...parsed.payload,
       logo_path: logoUpload.path,
+      user_id: userId,
     };
 
     for (let i = 0; i < payload.founders.length; i += 1) {
@@ -60,39 +74,25 @@ export async function POST(request: Request) {
       );
     }
 
-    const stripe = getStripe();
-    const origin = siteUrl();
-    const session = await stripe.checkout.sessions.create({
-      mode: "payment",
-      customer_email: payload.email,
-      success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/add?canceled=1`,
-      line_items: [
-        {
-          quantity: 1,
-          price_data: {
-            currency: "usd",
-            unit_amount: LISTING_PRICE_CENTS,
-            product_data: {
-              name: "WhyAlligator directory listing",
-              description: payload.company_name,
-            },
-          },
-        },
-      ],
+    const session = await createCheckoutSession({
+      email: payload.email,
+      name: payload.founders[0]?.name || payload.company_name,
+      // Dodo appends ?payment_id=...&status=... to this URL.
+      returnUrl: `${siteUrl()}/success`,
       metadata: {
-        pending_id: pending.id,
+        pending_id: String(pending.id),
+        company_name: payload.company_name,
       },
     });
 
-    if (!session.url) {
+    if (!session.checkout_url) {
       return NextResponse.json(
-        { error: "Stripe did not return a checkout URL." },
+        { error: "Payment provider did not return a checkout URL." },
         { status: 500 },
       );
     }
 
-    return NextResponse.json({ url: session.url });
+    return NextResponse.json({ url: session.checkout_url });
   } catch (error) {
     console.error(error);
     return NextResponse.json(

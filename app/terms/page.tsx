@@ -22,9 +22,12 @@ export default function TermsPage() {
       </p>
       <h2>Listings and payment</h2>
       <ul>
-        <li>The current price is a flat $20 USD, charged once by Stripe.</li>
         <li>
-          After Stripe confirms payment, we publish the information you submitted
+          The current price is a flat $20 USD, charged once by Dodo Payments,
+          our payment provider and merchant of record.
+        </li>
+        <li>
+          After Dodo Payments confirms payment, we publish the information you submitted
           on a public company page, newest listings first.
         </li>
         <li>
