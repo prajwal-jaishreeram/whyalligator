@@ -58,6 +58,60 @@ const PLACEHOLDER_CLAIM_SPOTS = [
     badgeClass: "pill pill-top-10",
     badgeLabel: "#4 Spot Available",
   },
+  {
+    spot: 5,
+    name: "Your Brand",
+    pitch: "Put your startup on the front page of the other 99%. Gain direct SEO authority and founder eyeballs.",
+    location: "Your City / Remote",
+    industries: ["Fintech", "Design"],
+    badgeClass: "pill pill-top-10",
+    badgeLabel: "#5 Spot Available",
+  },
+  {
+    spot: 6,
+    name: "Your Brand",
+    pitch: "Show your project to thousands of indie hackers, builders, and active early adopters worldwide.",
+    location: "Your City / Remote",
+    industries: ["B2B", "SaaS"],
+    badgeClass: "pill pill-top-10",
+    badgeLabel: "#6 Spot Available",
+  },
+  {
+    spot: 7,
+    name: "Your Brand",
+    pitch: "Permanent directory listing with dofollow backlink, real-time upvotes, and customer inquiries.",
+    location: "Your City / Remote",
+    industries: ["AI", "Analytics"],
+    badgeClass: "pill pill-top-10",
+    badgeLabel: "#7 Spot Available",
+  },
+  {
+    spot: 8,
+    name: "Your Brand",
+    pitch: "Join the alternative directory for startups building the real future. Secure your batch placement.",
+    location: "Your City / Remote",
+    industries: ["Developer Tools", "Open Source"],
+    badgeClass: "pill pill-top-10",
+    badgeLabel: "#8 Spot Available",
+  },
+  {
+    spot: 9,
+    name: "Your Brand",
+    pitch: "Boost your search engine visibility and stand out amongst ambitious global founders.",
+    location: "Your City / Remote",
+    industries: ["E-commerce", "Operations"],
+    badgeClass: "pill pill-top-10",
+    badgeLabel: "#9 Spot Available",
+  },
+  {
+    spot: 10,
+    name: "Your Brand",
+    pitch: "Lock in your early Batch 1 positioning before the directory fills up to 3,000 startups.",
+    location: "Your City / Remote",
+    industries: ["Security", "Infrastructure"],
+    badgeClass: "pill pill-top-10",
+    badgeLabel: "#10 Spot Available",
+  },
 ];
 
 export function DirectoryClient({ companies }: { companies: Company[] }) {
@@ -72,6 +126,9 @@ export function DirectoryClient({ companies }: { companies: Company[] }) {
   const [regions, setRegions] = useState<string[]>([]);
   const [sort, setSort] = useState<SortKey>("top_voted");
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [batchFilterOpen, setBatchFilterOpen] = useState(true);
+  const [industryFilterOpen, setIndustryFilterOpen] = useState(true);
+  const [regionFilterOpen, setRegionFilterOpen] = useState(true);
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -373,6 +430,7 @@ export function DirectoryClient({ companies }: { companies: Company[] }) {
         selected={batches}
         onChange={setBatches}
         defaultOpen={true}
+        onToggleOpen={setBatchFilterOpen}
       />
       <HierarchicalTaxonomyFilterGroup
         title="Industry"
@@ -383,6 +441,7 @@ export function DirectoryClient({ companies }: { companies: Company[] }) {
         onChange={setIndustries}
         getCount={(name) => countIn(pools.industry, "industries", name)}
         defaultOpen={true}
+        onToggleOpen={setIndustryFilterOpen}
       />
       <HierarchicalTaxonomyFilterGroup
         title="HQ Region"
@@ -393,6 +452,7 @@ export function DirectoryClient({ companies }: { companies: Company[] }) {
         onChange={setRegions}
         getCount={(name) => countIn(pools.region, "regions", name)}
         defaultOpen={true}
+        onToggleOpen={setRegionFilterOpen}
       />
 
       <div className="filter-section">
@@ -591,7 +651,7 @@ export function DirectoryClient({ companies }: { companies: Company[] }) {
 
         <p className="showing" aria-live="polite">
           {companies.length === 0
-            ? "Batch 1 is open — 4 priority spots available to claim below"
+            ? `Batch 1 is open — priority spots available to claim below`
             : `Showing ${filtered.length} of ${companies.length} companies`}
         </p>
         <div className="results-box">
@@ -620,9 +680,24 @@ export function DirectoryClient({ companies }: { companies: Company[] }) {
                 );
               })}
 
-              {/* Render claimable spots below to fill down to filter height */}
-              {(!query && batches.length === 0 && industries.length === 0 && regions.length === 0 && !hiringOnly && !nonprofitOnly && !topCompaniesOnly && filtered.length < 4) ? (
-                PLACEHOLDER_CLAIM_SPOTS.slice(filtered.length, 4).map((slot) => (
+              {/* Render claimable spots below to fill down to HQ Region / filter height */}
+              {(() => {
+                if (query || batches.length > 0 || industries.length > 0 || regions.length > 0 || hiringOnly || nonprofitOnly || topCompaniesOnly) {
+                  return null;
+                }
+                // Calculate how many rows are needed to align with the bottom of HQ Region
+                // Top checkboxes: ~110px. Batch: 50px header + (open ? 180px : 0). Industry: 50px header + (open ? 240px : 0). HQ Region: 50px header + (open ? 240px : 0)
+                let filterHeightEstimate = 110;
+                if (batchFilterOpen) filterHeightEstimate += 220; else filterHeightEstimate += 50;
+                if (industryFilterOpen) filterHeightEstimate += 280; else filterHeightEstimate += 50;
+                if (regionFilterOpen) filterHeightEstimate += 280; else filterHeightEstimate += 50;
+
+                // Each company row in results is ~125px on desktop (including borders and padding)
+                const targetSlots = Math.min(10, Math.max(3, Math.round(filterHeightEstimate / 125)));
+
+                if (filtered.length >= targetSlots) return null;
+
+                return PLACEHOLDER_CLAIM_SPOTS.slice(filtered.length, targetSlots).map((slot) => (
                   <Link
                     key={slot.spot}
                     href="/add"
@@ -716,10 +791,10 @@ export function DirectoryClient({ companies }: { companies: Company[] }) {
                     </div>
                   </div>
                 </Link>
-              ))
-            ) : null}
-          </>
-        )}
+                ));
+              })()}
+            </>
+          )}
       </div>
       </section>
 
@@ -762,6 +837,7 @@ function CollapsibleFilterGroup({
   onChange,
   defaultOpen = false,
   limit = 6,
+  onToggleOpen,
 }: {
   title: string;
   allLabel: string;
@@ -771,6 +847,7 @@ function CollapsibleFilterGroup({
   onChange: (next: string[]) => void;
   defaultOpen?: boolean;
   limit?: number;
+  onToggleOpen?: (isOpen: boolean) => void;
 }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const [showAll, setShowAll] = useState(false);
@@ -791,7 +868,11 @@ function CollapsibleFilterGroup({
       <button
         type="button"
         className="filter-section-header-btn"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => {
+          const next = !isOpen;
+          setIsOpen(next);
+          onToggleOpen?.(next);
+        }}
         aria-expanded={isOpen}
       >
         <h4 className="yc-filter-title">{title}</h4>
@@ -912,6 +993,7 @@ function HierarchicalTaxonomyFilterGroup({
   getCount,
   defaultOpen = true,
   limit = 6,
+  onToggleOpen,
 }: {
   title: string;
   allLabel: string;
@@ -922,6 +1004,7 @@ function HierarchicalTaxonomyFilterGroup({
   getCount: (name: string) => number;
   defaultOpen?: boolean;
   limit?: number;
+  onToggleOpen?: (isOpen: boolean) => void;
 }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const [showAll, setShowAll] = useState(false);
@@ -973,7 +1056,11 @@ function HierarchicalTaxonomyFilterGroup({
       <button
         type="button"
         className="filter-section-header-btn"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => {
+          const next = !isOpen;
+          setIsOpen(next);
+          onToggleOpen?.(next);
+        }}
         aria-expanded={isOpen}
       >
         <h4 className="yc-filter-title">{title}</h4>
