@@ -7,7 +7,7 @@ export function Footer() {
       <div className="footer-inner">
         <div className="footer-brand">
           <Image src="/logo.png" alt="" width={32} height={32} />
-          <h2 className="footer-tagline">Make something people (probably) want.</h2>
+          <h2 className="footer-tagline">List something people want.</h2>
         </div>
 
         <div className="footer-cols">
