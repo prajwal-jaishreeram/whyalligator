@@ -195,9 +195,17 @@ export default function DashboardPage() {
       return;
     }
     const supabase = createBrowserClient();
-    const { data: authData } = await supabase.auth.getSession();
-    const user = authData.session?.user;
-    if (!user) {
+    // Validate user against Supabase auth server to prevent stale browser localStorage
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    const user = userData?.user;
+    if (userError || !user) {
+      await supabase.auth.signOut().catch(() => {});
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.clear();
+          sessionStorage.clear();
+        } catch {}
+      }
       window.location.href = "/login";
       return;
     }
@@ -264,9 +272,10 @@ export default function DashboardPage() {
     }
 
     // Fetch user's upvoted startups & notifications
-    if (authData.session?.access_token) {
+    const { data: authSessionData } = await supabase.auth.getSession();
+    if (authSessionData.session?.access_token) {
       fetch("/api/user/upvotes", {
-        headers: { Authorization: `Bearer ${authData.session.access_token}` },
+        headers: { Authorization: `Bearer ${authSessionData.session.access_token}` },
       })
         .then((r) => r.json())
         .then((d) => {

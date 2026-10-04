@@ -218,9 +218,10 @@ export default function EditCompanyPage() {
     async function loadCompany() {
       if (!hasSupabaseConfig() || !slug) return;
       const supabase = createBrowserClient();
-      const { data: authData } = await supabase.auth.getSession();
-      const user = authData.session?.user;
-      if (!user) {
+      const { data: userData, error: userErr } = await supabase.auth.getUser();
+      const user = userData?.user;
+      if (userErr || !user) {
+        await supabase.auth.signOut().catch(() => {});
         window.location.href = `/login?redirect=/companies/${slug}/edit`;
         return;
       }

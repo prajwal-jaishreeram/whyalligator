@@ -135,12 +135,21 @@ export function Header() {
     if (!hasSupabaseConfig()) return;
     try {
       const supabase = createBrowserClient();
-      supabase.auth.getSession().then(({ data }) => {
-        setUserEmail(data.session?.user?.email ?? null);
-        const token = data.session?.access_token;
-        if (token) {
-          refreshNotifications(token);
+      supabase.auth.getUser().then(({ data, error }) => {
+        if (error || !data.user) {
+          supabase.auth.signOut().catch(() => {});
+          setUserEmail(null);
+          setUnreadCount(0);
+          setNotifications([]);
+          return;
         }
+        setUserEmail(data.user.email ?? null);
+        supabase.auth.getSession().then(({ data: sessData }) => {
+          const token = sessData.session?.access_token;
+          if (token) {
+            refreshNotifications(token);
+          }
+        });
       });
 
       const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {

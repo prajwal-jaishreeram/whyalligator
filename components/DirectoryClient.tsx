@@ -192,24 +192,33 @@ export function DirectoryClient({ companies }: { companies: Company[] }) {
         )
         .subscribe();
 
-      supabase.auth.getSession().then(({ data }) => {
-        const user = data.session?.user;
-        const token = data.session?.access_token;
-        if (user && token) {
-          setIsLoggedIn(true);
-          setCurrentUserId(user.id);
-          setCurrentUserEmail(user.email ?? null);
-          fetch("/api/user/upvotes", {
-            headers: { Authorization: `Bearer ${token}` },
-          })
-            .then((r) => r.json())
-            .then((res) => {
-              if (Array.isArray(res.upvoted_company_ids)) {
-                setUserUpvoteIds(new Set(res.upvoted_company_ids));
-              }
-            })
-            .catch(() => {});
+      supabase.auth.getUser().then(({ data: userData, error: userErr }) => {
+        const user = userData?.user;
+        if (userErr || !user) {
+          setIsLoggedIn(false);
+          setCurrentUserId(null);
+          setCurrentUserEmail(null);
+          setUserUpvoteIds(new Set());
+          return;
         }
+        supabase.auth.getSession().then(({ data }) => {
+          const token = data.session?.access_token;
+          if (token) {
+            setIsLoggedIn(true);
+            setCurrentUserId(user.id);
+            setCurrentUserEmail(user.email ?? null);
+            fetch("/api/user/upvotes", {
+              headers: { Authorization: `Bearer ${token}` },
+            })
+              .then((r) => r.json())
+              .then((res) => {
+                if (Array.isArray(res.upvoted_company_ids)) {
+                  setUserUpvoteIds(new Set(res.upvoted_company_ids));
+                }
+              })
+              .catch(() => {});
+          }
+        });
       });
 
       return () => {
