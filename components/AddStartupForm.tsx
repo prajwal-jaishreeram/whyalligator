@@ -469,8 +469,11 @@ export function AddStartupForm() {
         errors.company_name = "Company name must be at least 2 characters.";
         if (!firstErrorSelector) firstErrorSelector = 'input[name="company_name"]';
       }
-      if (!pitch.trim() || pitch.length < 4) {
-        errors.pitch = "Please enter a one-line pitch (at least 4 characters).";
+      if (!pitch.trim() || pitch.trim().length < 4) {
+        errors.pitch = "Please enter a tagline (at least 4 characters).";
+        if (!firstErrorSelector) firstErrorSelector = 'input[name="pitch"]';
+      } else if (pitch.trim().length > 90) {
+        errors.pitch = "Tagline must be 90 characters or fewer for optimal display.";
         if (!firstErrorSelector) firstErrorSelector = 'input[name="pitch"]';
       }
       if (!description.trim() || description.length < 20) {
@@ -1077,20 +1080,20 @@ export function AddStartupForm() {
               </label>
 
               <label className="yc-field-label">
-                <span>One-line pitch <strong className="req">*</strong></span>
+                <span>Tagline (one-line pitch) <strong className="req">*</strong></span>
                 <input
                   name="pitch"
                   required
-                  maxLength={140}
+                  maxLength={90}
                   value={pitch}
                   onChange={(e) => {
                     setPitch(e.target.value);
                     if (fieldErrors.pitch) clearFieldError("pitch");
                   }}
                   className={fieldErrors.pitch ? "is-invalid" : ""}
-                  placeholder="Talk to your computer without talking"
+                  placeholder="e.g. AI-powered customer support that resolves tickets in seconds"
                 />
-                <span className="char-count">{pitch.length}/140</span>
+                <span className="char-count">{pitch.length}/90 characters (1 line on desktop, max 3 lines on mobile)</span>
                 <FieldError message={fieldErrors.pitch} />
               </label>
 

@@ -961,14 +961,26 @@ select {
 .company-pitch {
   margin: 4px 0 8px;
   font-size: 14px;
-  font-weight: 200;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  font-weight: 400;
+  color: #4b5563;
+  line-height: 1.45;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  word-break: break-word;
+  display: block;
+  max-width: 100%;
+}
+
+.dash-startup-tagline {
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted);
   line-height: 1.45;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  max-width: 100%;
 }
 
 .pill-row {
@@ -2131,13 +2143,15 @@ select {
     word-break: break-word !important;
   }
 
-  .company-pitch {
+  .company-pitch,
+  .dash-startup-tagline {
     font-size: 13px !important;
     line-height: 1.4 !important;
     margin: 3px 0 6px !important;
     word-break: break-word !important;
+    white-space: normal !important;
     display: -webkit-box !important;
-    -webkit-line-clamp: 2 !important;
+    -webkit-line-clamp: 3 !important;
     -webkit-box-orient: vertical !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
@@ -2467,13 +2481,15 @@ select {
     font-size: 14.5px !important;
   }
 
-  .company-pitch {
+  .company-pitch,
+  .dash-startup-tagline {
     font-size: 12px !important;
     line-height: 1.35 !important;
     margin: 2px 0 5px !important;
     word-break: break-word !important;
+    white-space: normal !important;
     display: -webkit-box !important;
-    -webkit-line-clamp: 2 !important;
+    -webkit-line-clamp: 3 !important;
     -webkit-box-orient: vertical !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;

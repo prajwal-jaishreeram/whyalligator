@@ -24,8 +24,8 @@ export function validateListing(input: ListingInput): string | null {
   if (name.length < 2 || name.length > 80) {
     return "Company name must be between 2 and 80 characters.";
   }
-  if (pitch.length < 4 || pitch.length > 140) {
-    return "Pitch must be between 4 and 140 characters.";
+  if (pitch.length < 4 || pitch.length > 90) {
+    return "Tagline must be between 4 and 90 characters.";
   }
   if (!URL_PATTERN.test(website)) {
     return "Website must be a valid URL.";

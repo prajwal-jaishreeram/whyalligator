@@ -91,7 +91,9 @@ export function CompanyCard({
             <span className="company-location">{company.location}</span>
           ) : null}
         </div>
-        <p className="company-pitch">{company.pitch}</p>
+        <p className="company-pitch" title={(company.pitch || "").replace(/[\r\n\t]+/g, " ").trim()}>
+          {(company.pitch || "").replace(/[\r\n\t]+/g, " ").trim()}
+        </p>
         <div className="pill-row">
           <span className="pill pill-batch">{company.batch}</span>
           <ActivityStatusBadge status={company.activity_status} />

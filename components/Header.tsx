@@ -95,6 +95,7 @@ export function Header() {
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [notifications, setNotifications] = useState<UserNotification[]>([]);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [userStartupCount, setUserStartupCount] = useState<number>(0);
   const notifBtnRef = useRef<HTMLButtonElement>(null);
   const mobileNotifBtnRef = useRef<HTMLButtonElement>(null);
   const notifDropdownRef = useRef<HTMLDivElement>(null);
@@ -131,6 +132,26 @@ export function Header() {
       .catch(() => {});
   };
 
+  const fetchStartupCount = (userId: string, email: string) => {
+    if (!hasSupabaseConfig()) return;
+    try {
+      const supabase = createBrowserClient();
+      const emailClean = email.trim().toLowerCase();
+      supabase
+        .from("companies")
+        .select("id", { count: "exact", head: true })
+        .or(`user_id.eq.${userId},email.ilike.${email},partner_emails.cs.{"${emailClean}"}`)
+        .then(({ count, error }) => {
+          if (!error && typeof count === "number") {
+            setUserStartupCount(count);
+          }
+        })
+        .catch(() => {});
+    } catch {
+      // ignore
+    }
+  };
+
   useEffect(() => {
     if (!hasSupabaseConfig()) return;
     try {
@@ -139,11 +160,13 @@ export function Header() {
         if (error || !data.user) {
           supabase.auth.signOut().catch(() => {});
           setUserEmail(null);
+          setUserStartupCount(0);
           setUnreadCount(0);
           setNotifications([]);
           return;
         }
         setUserEmail(data.user.email ?? null);
+        fetchStartupCount(data.user.id, data.user.email ?? "");
         supabase.auth.getSession().then(({ data: sessData }) => {
           const token = sessData.session?.access_token;
           if (token) {
@@ -155,6 +178,11 @@ export function Header() {
       const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
         setUserEmail(session?.user?.email ?? null);
         const token = session?.access_token;
+        if (session?.user) {
+          fetchStartupCount(session.user.id, session.user.email ?? "");
+        } else {
+          setUserStartupCount(0);
+        }
         if (token) {
           refreshNotifications(token);
         } else {
@@ -176,6 +204,7 @@ export function Header() {
     const supabase = createBrowserClient();
     await supabase.auth.signOut();
     setUserEmail(null);
+    setUserStartupCount(0);
     window.location.href = "/";
   }
 
@@ -308,7 +337,7 @@ export function Header() {
             </Link>
             <div className="dropdown">
               <Link href="/about">What is WhyAlligator?</Link>
-              <Link href="/add">Add your startup</Link>
+              <Link href="/add">{userStartupCount > 0 ? "Add more" : "Add startup"}</Link>
               <Link href="/contact">Contact</Link>
             </div>
           </div>
@@ -432,7 +461,7 @@ export function Header() {
               </>
             )}
             <Link href="/add" className="apply-btn">
-              {userEmail ? "Add more" : "Add yours"}
+              {userStartupCount > 0 ? "Add more" : "Add startup"}
             </Link>
           </div>
         </div>
@@ -711,7 +740,7 @@ export function Header() {
           <Link href="/partners" onClick={close}>Partners</Link>
           <Link href="/resources" onClick={close}>Resources</Link>
           <Link href="/jobs" onClick={close}>Startup Jobs</Link>
-          <Link href="/add" onClick={close}>{userEmail ? "Add more" : "Add your startup"}</Link>
+          <Link href="/add" onClick={close}>{userStartupCount > 0 ? "Add more" : "Add startup"}</Link>
           <Link href="/privacy" onClick={close}>Privacy Policy</Link>
           <Link href="/terms" onClick={close}>Terms of Use</Link>
           <Link href="/contact" onClick={close}>Contact</Link>

@@ -97,8 +97,8 @@ export function parseListingForm(form: FormData): {
   if (company_name.length < 2 || company_name.length > 80) {
     return empty("Company name must be between 2 and 80 characters.");
   }
-  if (pitch.length < 4 || pitch.length > 140) {
-    return empty("Pitch must be between 4 and 140 characters.");
+  if (pitch.length < 4 || pitch.length > 90) {
+    return empty("Tagline must be between 4 and 90 characters.");
   }
   if (!/^https?:\/\/.+/i.test(website_url)) {
     return empty("Website must be a valid URL.");

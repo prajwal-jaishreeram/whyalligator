@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Add your startup | WhyAlligator",
-  description: "Y Combinator accepts 1%. We accept the other 99%. $20 to list.",
+  description: "Y Combinator accepts 1%. We accept the other 99%. List your startup on WhyAlligator.",
 };
 
 export default async function AddPage({

@@ -354,7 +354,10 @@ export default function DashboardPage() {
         throw new Error("Company name must be at least 2 characters.");
       }
       if (trimmedPitch.length < 4) {
-        throw new Error("Pitch must be at least 4 characters.");
+        throw new Error("Tagline must be at least 4 characters.");
+      }
+      if (trimmedPitch.length > 90) {
+        throw new Error("Tagline must be 90 characters or fewer.");
       }
 
       const slug = company.slug || company.id;
@@ -1610,13 +1613,13 @@ export default function DashboardPage() {
                               color: "#374151",
                             }}
                           >
-                            One-Line Pitch
+                            Tagline (One-line pitch)
                           </label>
                           <input
                             value={editPitch}
                             onChange={(e) => setEditPitch(e.target.value)}
-                            placeholder="One-line pitch"
-                            maxLength={140}
+                            placeholder="e.g. AI-powered analytics that transforms user feedback"
+                            maxLength={90}
                             required
                             style={{
                               width: "100%",
@@ -1628,6 +1631,9 @@ export default function DashboardPage() {
                               background: "#fff",
                             }}
                           />
+                          <div style={{ fontSize: "12px", color: "var(--muted)", marginTop: "4px" }}>
+                            {editPitch.length}/90 characters (1 line on desktop, max 3 lines on mobile)
+                          </div>
                         </div>
 
                         <div>
@@ -1750,20 +1756,10 @@ export default function DashboardPage() {
                               {company.company_name}
                             </h3>
                             <p
-                              style={{
-                                margin: 0,
-                                fontSize: "14px",
-                                color: "var(--muted)",
-                                wordBreak: "break-word",
-                                lineHeight: 1.45,
-                                display: "-webkit-box",
-                                WebkitLineClamp: 2,
-                                WebkitBoxOrient: "vertical",
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                              }}
+                              className="dash-startup-tagline"
+                              title={(company.pitch || "").replace(/[\r\n\t]+/g, " ").trim()}
                             >
-                              {company.pitch}
+                              {(company.pitch || "").replace(/[\r\n\t]+/g, " ").trim()}
                             </p>
                           </div>
                         </div>
@@ -2339,8 +2335,11 @@ export default function DashboardPage() {
                         <ActivityStatusBadge status={company.activity_status} />
                         {company.location ? <span className="pill">{company.location}</span> : null}
                       </div>
-                      <p style={{ margin: 0, fontSize: "14px", color: "var(--muted)", lineHeight: 1.4 }}>
-                        {company.pitch}
+                      <p
+                        className="dash-startup-tagline"
+                        title={(company.pitch || "").replace(/[\r\n\t]+/g, " ").trim()}
+                      >
+                        {(company.pitch || "").replace(/[\r\n\t]+/g, " ").trim()}
                       </p>
                     </div>
 

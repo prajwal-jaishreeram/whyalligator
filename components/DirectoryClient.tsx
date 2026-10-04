@@ -25,7 +25,7 @@ const PLACEHOLDER_CLAIM_SPOTS = [
   {
     spot: 1,
     name: "Your Brand",
-    pitch: "Be the #1 startup listed on WhyAlligator. Claim this spot to get discovered by founders and investors.",
+    pitch: "Be the #1 startup listed on WhyAlligator and get seen by founders.",
     location: "Your City / Remote",
     industries: ["AI", "B2B"],
     badgeClass: "pill pill-gold",
@@ -34,7 +34,7 @@ const PLACEHOLDER_CLAIM_SPOTS = [
   {
     spot: 2,
     name: "Your Brand",
-    pitch: "Showcase your product, find your first 1,000 users, and collect upvotes from the community.",
+    pitch: "Showcase your product and collect community upvotes early.",
     location: "Your City / Remote",
     industries: ["SaaS", "Engineering"],
     badgeClass: "pill pill-silver",
@@ -43,7 +43,7 @@ const PLACEHOLDER_CLAIM_SPOTS = [
   {
     spot: 3,
     name: "Your Brand",
-    pitch: "Launch your project to the other 99%. Claim your permanent listing and climb the leaderboard.",
+    pitch: "Launch your startup to the other 99% and climb the ranks.",
     location: "Your City / Remote",
     industries: ["Consumer", "Fintech"],
     badgeClass: "pill pill-bronze",
@@ -52,7 +52,7 @@ const PLACEHOLDER_CLAIM_SPOTS = [
   {
     spot: 4,
     name: "Your Brand",
-    pitch: "Get verified backlinks, organic traffic, and community validation. Add your startup in 2 minutes.",
+    pitch: "Get verified backlinks, organic traffic, and community reach.",
     location: "Your City / Remote",
     industries: ["Productivity", "Developer Tools"],
     badgeClass: "pill pill-top-10",
@@ -61,7 +61,7 @@ const PLACEHOLDER_CLAIM_SPOTS = [
   {
     spot: 5,
     name: "Your Brand",
-    pitch: "Put your startup on the front page of the other 99%. Gain direct SEO authority and founder eyeballs.",
+    pitch: "Put your startup in front of global founders and early adopters.",
     location: "Your City / Remote",
     industries: ["Fintech", "Design"],
     badgeClass: "pill pill-top-10",
@@ -70,7 +70,7 @@ const PLACEHOLDER_CLAIM_SPOTS = [
   {
     spot: 6,
     name: "Your Brand",
-    pitch: "Show your project to thousands of indie hackers, builders, and active early adopters worldwide.",
+    pitch: "Permanent directory listing with real-time upvotes.",
     location: "Your City / Remote",
     industries: ["B2B", "SaaS"],
     badgeClass: "pill pill-top-10",
@@ -79,7 +79,7 @@ const PLACEHOLDER_CLAIM_SPOTS = [
   {
     spot: 7,
     name: "Your Brand",
-    pitch: "Permanent directory listing with dofollow backlink, real-time upvotes, and customer inquiries.",
+    pitch: "Join ambitious indie builders launching the real future.",
     location: "Your City / Remote",
     industries: ["AI", "Analytics"],
     badgeClass: "pill pill-top-10",
@@ -88,7 +88,7 @@ const PLACEHOLDER_CLAIM_SPOTS = [
   {
     spot: 8,
     name: "Your Brand",
-    pitch: "Join the alternative directory for startups building the real future. Secure your batch placement.",
+    pitch: "Secure your early spot in Batch 1 before 3,000 startups join.",
     location: "Your City / Remote",
     industries: ["Developer Tools", "Open Source"],
     badgeClass: "pill pill-top-10",
@@ -97,7 +97,7 @@ const PLACEHOLDER_CLAIM_SPOTS = [
   {
     spot: 9,
     name: "Your Brand",
-    pitch: "Boost your search engine visibility and stand out amongst ambitious global founders.",
+    pitch: "Stand out on the front page and gain early founder attention.",
     location: "Your City / Remote",
     industries: ["E-commerce", "Operations"],
     badgeClass: "pill pill-top-10",
@@ -106,7 +106,7 @@ const PLACEHOLDER_CLAIM_SPOTS = [
   {
     spot: 10,
     name: "Your Brand",
-    pitch: "Lock in your early Batch 1 positioning before the directory fills up to 3,000 startups.",
+    pitch: "Lock in your permanent placement and qualify for grant funding.",
     location: "Your City / Remote",
     industries: ["Security", "Infrastructure"],
     badgeClass: "pill pill-top-10",
