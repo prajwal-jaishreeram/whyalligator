@@ -3775,6 +3775,9 @@ select {
 
 .countdown-inner {
   padding: 20px 24px;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
 }
 
 .countdown-top-row {
@@ -3838,6 +3841,9 @@ select {
   grid-template-columns: 1fr 1.3fr;
   gap: 20px;
   align-items: stretch;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .countdown-timer-box {
@@ -3850,6 +3856,9 @@ select {
   justify-content: center;
   align-items: center;
   text-align: center;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .timer-label {
@@ -3916,6 +3925,9 @@ select {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .leader-box-header {
@@ -4148,16 +4160,24 @@ select {
   color: #4b5563;
 }
 
-/* Mobile Responsiveness for Countdown Banner */
+/* Mobile Responsiveness for Countdown Banner & Milestones */
 @media (max-width: 900px) {
   .countdown-main-grid {
     grid-template-columns: 1fr;
     gap: 16px;
   }
 
+  .countdown-inner {
+    padding: 16px 16px;
+  }
+
+  .countdown-timer-box {
+    padding: 16px 14px;
+  }
+
   .timer-number {
     font-size: 32px;
-    padding: 5px 10px;
+    padding: 6px 10px;
   }
 
   .winner-spotlight-card {
@@ -4167,6 +4187,380 @@ select {
 
   .winner-final-votes {
     align-items: flex-start;
+  }
+}
+
+@media (max-width: 640px) {
+  .batch-milestone-container {
+    margin: 12px 0 20px;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  .milestone-card {
+    border-radius: 0 0 10px 10px;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  /* Simulation Toolbar Mobile */
+  .sim-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 10px 10px 0 0;
+  }
+
+  .sim-toolbar-left {
+    display: flex;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+  }
+
+  .sim-caption {
+    font-size: 11px;
+    line-height: 1.35;
+    word-break: break-word;
+  }
+
+  .sim-toggle-btn {
+    text-align: left;
+    padding: 2px 0;
+    align-self: flex-start;
+  }
+
+  .sim-drawer {
+    padding: 10px;
+  }
+
+  .sim-drawer-content {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .sim-btn-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    width: 100%;
+  }
+
+  .sim-choice-btn {
+    padding: 6px 8px;
+    font-size: 11px;
+    text-align: center;
+    white-space: normal;
+    line-height: 1.25;
+    word-break: break-word;
+  }
+
+  .sim-vote-tester {
+    margin-top: 4px;
+  }
+
+  .sim-contenders-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+  }
+
+  .sim-contender-chip {
+    width: 100%;
+    justify-content: space-between;
+    box-sizing: border-box;
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  /* Countdown Inner Mobile */
+  .countdown-inner {
+    padding: 14px 12px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .countdown-top-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 14px;
+    width: 100%;
+  }
+
+  .countdown-indicator {
+    gap: 6px;
+  }
+
+  .countdown-heading-tag {
+    font-size: 12px;
+  }
+
+  .countdown-prize-pill {
+    font-size: 12px;
+    padding: 4px 10px;
+    max-width: 100%;
+    box-sizing: border-box;
+    white-space: normal;
+    line-height: 1.3;
+  }
+
+  /* Countdown Clock Mobile */
+  .countdown-timer-box {
+    padding: 14px 10px;
+    border-radius: 10px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .timer-label {
+    font-size: 10px;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+    line-height: 1.35;
+    padding: 0 4px;
+  }
+
+  .timer-digits-row {
+    gap: 6px;
+    margin-bottom: 10px;
+    width: 100%;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .timer-digit-block {
+    flex: 0 1 auto;
+  }
+
+  .timer-number {
+    font-size: 26px;
+    padding: 6px 10px;
+    min-width: 44px;
+    text-align: center;
+    border-radius: 6px;
+  }
+
+  .timer-sep {
+    font-size: 22px;
+    transform: translateY(-4px);
+    margin: 0 1px;
+  }
+
+  .timer-unit {
+    font-size: 8.5px;
+    margin-top: 3px;
+    letter-spacing: 0.5px;
+  }
+
+  .timer-subtext {
+    font-size: 11px;
+    line-height: 1.35;
+    max-width: 100%;
+    padding: 0 6px;
+  }
+
+  /* Leader Box Mobile */
+  .countdown-leader-box {
+    padding: 14px 12px;
+    border-radius: 10px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .leader-box-header {
+    margin-bottom: 10px;
+  }
+
+  .leader-card-body {
+    padding: 10px 12px;
+    gap: 10px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .leader-info {
+    gap: 10px;
+    min-width: 0;
+    flex: 1;
+  }
+
+  .leader-avatar {
+    width: 38px;
+    height: 38px;
+    font-size: 15px;
+    border-radius: 6px;
+  }
+
+  .leader-details {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .leader-name-link {
+    font-size: 15px;
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .leader-pitch {
+    max-width: 100%;
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    font-size: 12px;
+    line-height: 1.35;
+  }
+
+  .leader-vote-stat {
+    margin-left: auto;
+  }
+
+  .vote-stat-num {
+    font-size: 17px;
+  }
+
+  .vote-stat-label {
+    font-size: 9.5px;
+  }
+
+  .leader-dynamic-notice {
+    font-size: 11px;
+    padding: 8px 10px;
+    line-height: 1.4;
+    margin-top: 10px;
+  }
+
+  /* Milestone Open Mobile */
+  .milestone-open {
+    padding: 16px 12px;
+  }
+
+  .milestone-title {
+    font-size: 16px;
+  }
+
+  .milestone-desc {
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .milestone-footer-action {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .milestone-footer-action .apply-btn {
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+  }
+
+  /* Milestone Winner Mobile */
+  .milestone-winner {
+    padding: 16px 12px;
+  }
+
+  .winner-title {
+    font-size: 18px;
+  }
+
+  .winner-subtitle {
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .winner-spotlight-card {
+    padding: 12px;
+    gap: 10px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .winner-avatar {
+    width: 44px;
+    height: 44px;
+    font-size: 18px;
+  }
+
+  .winner-comp-name {
+    font-size: 16px;
+  }
+
+  .winner-comp-pitch {
+    font-size: 12.5px;
+  }
+
+  .winner-final-votes {
+    width: 100%;
+    align-items: flex-start;
+    border-top: 1px dashed #fde047;
+    padding-top: 8px;
+  }
+
+  .winner-votes-number {
+    font-size: 18px;
+  }
+
+  .winner-next-batch {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .winner-next-batch .apply-btn {
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 380px) {
+  .countdown-inner {
+    padding: 12px 8px;
+  }
+
+  .countdown-timer-box {
+    padding: 12px 6px;
+  }
+
+  .timer-digits-row {
+    gap: 4px;
+  }
+
+  .timer-number {
+    font-size: 22px;
+    padding: 5px 8px;
+    min-width: 38px;
+  }
+
+  .timer-sep {
+    font-size: 18px;
+    transform: translateY(-3px);
+  }
+
+  .timer-unit {
+    font-size: 8px;
+  }
+
+  .countdown-prize-pill {
+    font-size: 11px;
+    padding: 3px 8px;
+  }
+
+  .sim-btn-group {
+    grid-template-columns: 1fr;
   }
 }
 
