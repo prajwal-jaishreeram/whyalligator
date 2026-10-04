@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { createBrowserClient, hasSupabaseConfig } from "@/lib/supabase";
+import { safeRedirectPath } from "@/lib/password";
 
 function AuthCallbackContent() {
   const searchParams = useSearchParams();
@@ -15,7 +16,7 @@ function AuthCallbackContent() {
       return;
     }
 
-    const next = searchParams.get("next") || "/dashboard";
+    const next = safeRedirectPath(searchParams.get("next"));
     const supabase = createBrowserClient();
 
     // 1. Listen for auth state changes (PKCE code exchange, hash tokens, etc.)

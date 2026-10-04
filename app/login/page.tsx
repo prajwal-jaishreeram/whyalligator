@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useEffect, useState } from "react";
 import { createBrowserClient } from "@/lib/supabase";
+import { checkPassword, PASSWORD_RULES_MESSAGE, safeRedirectPath } from "@/lib/password";
 
 function PasswordRequirement({
   met,
@@ -54,7 +55,8 @@ function GoogleIcon() {
 function AuthForm() {
   const searchParams = useSearchParams();
   const urlMode = searchParams.get("mode") === "signup" ? "signup" : "login";
-  const redirect = searchParams.get("redirect") || "/dashboard";
+  const redirect = safeRedirectPath(searchParams.get("redirect"));
+  const resetDone = searchParams.get("reset") === "success";
 
   const [mode, setMode] = useState<"login" | "signup">(urlMode);
 
@@ -72,13 +74,10 @@ function AuthForm() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
-  // Password strength checks
-  const hasMinLength = password.length >= 8;
-  const hasUppercase = /[A-Z]/.test(password);
-  const hasLowercase = /[a-z]/.test(password);
-  const hasNumber = /[0-9]/.test(password);
+  // Password strength checks (shared rules)
+  const { hasMinLength, hasUppercase, hasLowercase, hasNumber, strong: passwordStrong } =
+    checkPassword(password);
   const passwordsMatch = password === confirmPassword && confirmPassword.length > 0;
-  const passwordStrong = hasMinLength && hasUppercase && hasLowercase && hasNumber;
 
   async function handleGoogleSignIn() {
     setError(null);
@@ -123,9 +122,7 @@ function AuthForm() {
     // Signup-specific validation
     if (mode === "signup") {
       if (!passwordStrong) {
-        setError(
-          "Password must be at least 8 characters with an uppercase letter, a lowercase letter, and a number."
-        );
+        setError(PASSWORD_RULES_MESSAGE);
         return;
       }
       if (password !== confirmPassword) {
@@ -223,6 +220,18 @@ function AuthForm() {
             border: "0.8px solid var(--line)",
           }}
         >
+          {resetDone && mode === "login" && !error && !message ? (
+            <p
+              style={{
+                color: "#16a34a",
+                fontSize: "13px",
+                fontWeight: 500,
+                marginBottom: "10px",
+              }}
+            >
+              Your password was reset. Please log in with your new password.
+            </p>
+          ) : null}
           {error ? (
             <p className="form-error" style={{ marginBottom: "10px", fontSize: "13px" }}>
               {error}
@@ -360,6 +369,17 @@ function AuthForm() {
                 }}
               />
             </label>
+
+            {mode === "login" ? (
+              <div style={{ textAlign: "right", marginTop: "-4px" }}>
+                <Link
+                  href={`/forgot-password${email ? `?email=${encodeURIComponent(email)}` : ""}`}
+                  style={{ fontSize: "12px", color: "var(--muted)", textDecoration: "underline" }}
+                >
+                  Forgot password?
+                </Link>
+              </div>
+            ) : null}
 
             {mode === "signup" && password.length > 0 ? (
               <div

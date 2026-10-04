@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createBrowserClient, hasSupabaseConfig } from "@/lib/supabase";
+import { checkPassword, PASSWORD_RULES_MESSAGE } from "@/lib/password";
 import type { Company, Job, UserNotification } from "@/lib/types";
 import { companyPath } from "@/lib/companies";
 import { ActivityStatusBadge } from "@/components/ActivityStatusBadge";
@@ -141,11 +142,17 @@ export default function DashboardPage() {
   const [emailError, setEmailError] = useState<string | null>(null);
 
   // Settings: Password state
+  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordSaving, setPasswordSaving] = useState(false);
   const [passwordMsg, setPasswordMsg] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  // true = account signed up with email + password; false = Google-only (no password yet)
+  const [hasEmailPassword, setHasEmailPassword] = useState(true);
+  // Google-only accounts verify by a 6-digit code emailed via supabase.auth.reauthenticate()
+  const [reauthCodeSent, setReauthCodeSent] = useState(false);
+  const [reauthCode, setReauthCode] = useState("");
 
   // Settings: Partner email inputs per company
   const [partnerInputs, setPartnerInputs] = useState<Record<string, string>>({});
@@ -224,6 +231,11 @@ export default function DashboardPage() {
     }
 
     setUserEmail(user.email ?? null);
+    {
+      const providers = (user.app_metadata?.providers as string[] | undefined) ?? [];
+      const identityProviders = (user.identities ?? []).map((i) => i.provider);
+      setHasEmailPassword(providers.includes("email") || identityProviders.includes("email"));
+    }
     const metaName = user.user_metadata?.full_name || user.user_metadata?.name || "";
     if (metaName) setNameInput(metaName);
 
@@ -751,27 +763,106 @@ export default function DashboardPage() {
     e.preventDefault();
     setPasswordError(null);
     setPasswordMsg(null);
-    if (newPassword.length < 6) {
-      setPasswordError("Password must be at least 6 characters.");
+    if (!checkPassword(newPassword).strong) {
+      setPasswordError(PASSWORD_RULES_MESSAGE);
       return;
     }
     if (newPassword !== confirmPassword) {
       setPasswordError("Passwords do not match.");
       return;
     }
+    if (!userEmail) {
+      setPasswordError("Your session has expired. Please log in again.");
+      return;
+    }
+    if (hasEmailPassword && !currentPassword) {
+      setPasswordError("Please enter your current password.");
+      return;
+    }
+    if (hasEmailPassword && currentPassword === newPassword) {
+      setPasswordError("Your new password must be different from your current password.");
+      return;
+    }
+    if (!hasEmailPassword && reauthCodeSent && !/^\d{6}$/.test(reauthCode.trim())) {
+      setPasswordError("Please enter the 6-digit code we emailed you.");
+      return;
+    }
+
     setPasswordSaving(true);
     try {
       const supabase = createBrowserClient();
-      const { error } = await supabase.auth.updateUser({ password: newPassword });
-      if (error) throw error;
-      setPasswordMsg("Password updated successfully!");
+
+      if (hasEmailPassword) {
+        // Step 1: prove the user knows the current password.
+        const { error: verifyErr } = await supabase.auth.signInWithPassword({
+          email: userEmail,
+          password: currentPassword,
+        });
+        if (verifyErr) {
+          const m = verifyErr.message.toLowerCase();
+          throw new Error(
+            m.includes("invalid") || m.includes("credentials")
+              ? "Current password is incorrect."
+              : verifyErr.message,
+          );
+        }
+        // Step 2: set the new password.
+        const { error } = await supabase.auth.updateUser({ password: newPassword });
+        if (error) throw error;
+      } else if (!reauthCodeSent) {
+        // Google-only account: email a one-time code to prove ownership first.
+        const { error: reauthErr } = await supabase.auth.reauthenticate();
+        if (reauthErr) throw reauthErr;
+        setReauthCodeSent(true);
+        setPasswordMsg(`We emailed a 6-digit code to ${userEmail}. Enter it below to set your password.`);
+        return;
+      } else {
+        const { error } = await supabase.auth.updateUser({
+          password: newPassword,
+          nonce: reauthCode.trim(),
+        });
+        if (error) throw error;
+      }
+
+      // Revoke every other session (other browsers/devices) after a password change.
+      await supabase.auth.signOut({ scope: "others" });
+
+      setPasswordMsg(
+        hasEmailPassword
+          ? "Password updated. You have been signed out on all other devices."
+          : "Password set. You can now also log in with your email and password.",
+      );
+      setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-      setTimeout(() => setPasswordMsg(null), 4000);
+      setReauthCode("");
+      setReauthCodeSent(false);
+      setTimeout(() => setPasswordMsg(null), 6000);
     } catch (err: unknown) {
-      setPasswordError(err instanceof Error ? err.message : "Failed to change password.");
+      const msg = err instanceof Error ? err.message : "Failed to change password.";
+      setPasswordError(
+        msg.toLowerCase().includes("different from the old")
+          ? "Your new password must be different from your current password."
+          : msg.toLowerCase().includes("nonce")
+          ? "That code is invalid or expired. Please request a new one."
+          : msg,
+      );
     } finally {
       setPasswordSaving(false);
+    }
+  }
+
+  async function handleResendReauthCode() {
+    setPasswordError(null);
+    setPasswordMsg(null);
+    try {
+      const supabase = createBrowserClient();
+      const { error } = await supabase.auth.reauthenticate();
+      if (error) throw error;
+      setReauthCodeSent(true);
+      setPasswordMsg(`A new 6-digit code was sent to ${userEmail}.`);
+    } catch (err: unknown) {
+      setPasswordError(err instanceof Error ? err.message : "Failed to send code. Please wait a minute and try again.");
     }
   }
 
@@ -2842,6 +2933,32 @@ export default function DashboardPage() {
               ) : null}
 
               <form onSubmit={handleUpdatePassword} style={{ display: "flex", flexDirection: "column", gap: "12px", maxWidth: "480px" }}>
+                {hasEmailPassword ? (
+                  <div>
+                    <label style={{ display: "block", fontSize: "13px", fontWeight: 500, marginBottom: "4px", color: "#374151" }}>
+                      Current Password
+                    </label>
+                    <input
+                      type="password"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      placeholder="Enter your current password"
+                      autoComplete="current-password"
+                      maxLength={72}
+                      required
+                      style={{ width: "100%", padding: "10px 12px", fontSize: "14px", border: "1px solid #d1d5db", borderRadius: "8px", boxSizing: "border-box" }}
+                    />
+                    <div style={{ marginTop: "4px", fontSize: "12px" }}>
+                      <Link href={`/forgot-password${userEmail ? `?email=${encodeURIComponent(userEmail)}` : ""}`} style={{ color: "var(--muted)", textDecoration: "underline" }}>
+                        Forgot your current password?
+                      </Link>
+                    </div>
+                  </div>
+                ) : (
+                  <p style={{ margin: 0, fontSize: "13px", color: "var(--muted)", lineHeight: "19px" }}>
+                    You signed in with Google, so your account has no password yet. To set one, we will email a 6-digit code to <strong style={{ color: "#111827" }}>{userEmail}</strong> to confirm it is you.
+                  </p>
+                )}
                 <div>
                   <label style={{ display: "block", fontSize: "13px", fontWeight: 500, marginBottom: "4px", color: "#374151" }}>
                     New Password
@@ -2850,11 +2967,33 @@ export default function DashboardPage() {
                     type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Min 6 characters"
-                    minLength={6}
+                    placeholder="Min 8 characters"
+                    autoComplete="new-password"
+                    minLength={8}
+                    maxLength={72}
                     required
                     style={{ width: "100%", padding: "10px 12px", fontSize: "14px", border: "1px solid #d1d5db", borderRadius: "8px", boxSizing: "border-box" }}
                   />
+                  {newPassword.length > 0 ? (
+                    (() => {
+                      const c = checkPassword(newPassword);
+                      const items: [boolean, string][] = [
+                        [c.hasMinLength, "8+ characters"],
+                        [c.hasUppercase, "1 uppercase"],
+                        [c.hasLowercase, "1 lowercase"],
+                        [c.hasNumber, "1 number"],
+                      ];
+                      return (
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 8px", marginTop: "6px", background: "#f9fafb", padding: "6px 8px", borderRadius: "6px", border: "1px solid #f3f4f6" }}>
+                          {items.map(([met, label]) => (
+                            <span key={label} style={{ fontSize: "12px", color: met ? "#16a34a" : "var(--muted)" }}>
+                              {met ? "✓" : "○"} {label}
+                            </span>
+                          ))}
+                        </div>
+                      );
+                    })()
+                  ) : null}
                 </div>
                 <div>
                   <label style={{ display: "block", fontSize: "13px", fontWeight: 500, marginBottom: "4px", color: "#374151" }}>
@@ -2865,11 +3004,43 @@ export default function DashboardPage() {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Re-enter new password"
-                    minLength={6}
+                    autoComplete="new-password"
+                    minLength={8}
+                    maxLength={72}
                     required
                     style={{ width: "100%", padding: "10px 12px", fontSize: "14px", border: "1px solid #d1d5db", borderRadius: "8px", boxSizing: "border-box" }}
                   />
+                  {confirmPassword.length > 0 ? (
+                    <span style={{ display: "block", marginTop: "4px", fontSize: "12px", color: newPassword === confirmPassword ? "#16a34a" : "#dc2626" }}>
+                      {newPassword === confirmPassword ? "✓ Passwords match" : "✕ Passwords do not match"}
+                    </span>
+                  ) : null}
                 </div>
+                {!hasEmailPassword && reauthCodeSent ? (
+                  <div>
+                    <label style={{ display: "block", fontSize: "13px", fontWeight: 500, marginBottom: "4px", color: "#374151" }}>
+                      6-digit code from your email
+                    </label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      value={reauthCode}
+                      onChange={(e) => setReauthCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                      placeholder="123456"
+                      maxLength={6}
+                      required
+                      style={{ width: "100%", padding: "10px 12px", fontSize: "16px", letterSpacing: "4px", border: "1px solid #d1d5db", borderRadius: "8px", boxSizing: "border-box" }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleResendReauthCode}
+                      style={{ marginTop: "4px", background: "none", border: "none", padding: 0, fontSize: "12px", color: "var(--muted)", textDecoration: "underline", cursor: "pointer" }}
+                    >
+                      Resend code
+                    </button>
+                  </div>
+                ) : null}
                 <div>
                   <button
                     type="submit"
@@ -2877,7 +3048,13 @@ export default function DashboardPage() {
                     style={{ height: "38px", fontSize: "14px", padding: "0 18px", marginTop: "4px" }}
                     disabled={passwordSaving}
                   >
-                    {passwordSaving ? "Updating..." : "Update Password"}
+                    {passwordSaving
+                      ? "Please wait..."
+                      : hasEmailPassword
+                      ? "Update Password"
+                      : reauthCodeSent
+                      ? "Set Password"
+                      : "Email me a code"}
                   </button>
                 </div>
               </form>

@@ -141,12 +141,14 @@ export function Header() {
         .from("companies")
         .select("id", { count: "exact", head: true })
         .or(`user_id.eq.${userId},email.ilike.${email},partner_emails.cs.{"${emailClean}"}`)
-        .then(({ count, error }) => {
-          if (!error && typeof count === "number") {
-            setUserStartupCount(count);
-          }
-        })
-        .catch(() => {});
+        .then(
+          ({ count, error }) => {
+            if (!error && typeof count === "number") {
+              setUserStartupCount(count);
+            }
+          },
+          () => {},
+        );
     } catch {
       // ignore
     }
