@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase";
+import { sendNewCommentEmail } from "@/lib/email";
 
 export const runtime = "nodejs";
 
@@ -195,6 +196,16 @@ export async function POST(
         link: `/companies/${company.slug || slug}`,
         metadata: { comment_id: newComment.id, company_id: company.id },
       });
+
+      if (company.email) {
+        sendNewCommentEmail({
+          email: company.email,
+          companyName: company.company_name,
+          slug: company.slug || slug,
+          authorName: authorTag,
+          commentSnippet: snippet,
+        }).catch((err) => console.error("Error sending new comment email", err));
+      }
     }
 
     return NextResponse.json({ success: true, comment: newComment });

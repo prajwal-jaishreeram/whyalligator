@@ -4,6 +4,7 @@ import { createCheckoutSession } from "@/lib/dodo";
 import { siteUrl } from "@/lib/companies";
 import { parseListingForm } from "@/lib/listing";
 import { uploadPublicImage } from "@/lib/storage";
+import { sendSubmissionReceivedEmail } from "@/lib/email";
 import type { ListingPayload } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -72,6 +73,15 @@ export async function POST(request: Request) {
         { error: "Could not save listing. Did you run the latest schema.sql?" },
         { status: 500 },
       );
+    }
+
+    if (payload.email) {
+      sendSubmissionReceivedEmail({
+        email: payload.email,
+        companyName: payload.company_name,
+        founderName: payload.founders[0]?.name,
+        pitch: payload.pitch,
+      }).catch((err) => console.error("Error sending submission email", err));
     }
 
     const session = await createCheckoutSession({

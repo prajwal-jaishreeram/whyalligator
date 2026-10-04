@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase";
+import { sendUpvoteMilestoneEmail, sendRankAchievementEmail } from "@/lib/email";
 
 export const runtime = "nodejs";
 
@@ -196,8 +197,8 @@ export async function POST(
         metadata: { company_id: company.id, voter_id: user.id },
       });
 
-      // 2. Milestone Notifications (e.g. 10, 50, 100)
-      if ([10, 50, 100].includes(freshCount)) {
+      // 2. Milestone Notifications (e.g. 25, 50, 100)
+      if ([25, 50, 100].includes(freshCount)) {
         await admin.from("user_notifications").insert({
           user_id: company.user_id,
           type: "milestone_100",
@@ -206,6 +207,15 @@ export async function POST(
           link: `/companies/${company.slug || slug}`,
           metadata: { milestone: freshCount, company_id: company.id },
         });
+
+        if (company.email) {
+          sendUpvoteMilestoneEmail({
+            email: company.email,
+            companyName: company.company_name,
+            slug: company.slug || slug,
+            upvotesCount: freshCount,
+          }).catch((err) => console.error("Error sending milestone email", err));
+        }
       }
 
       // 3. Top 3 Ranking Notification
@@ -225,6 +235,15 @@ export async function POST(
           link: `/companies/${company.slug || slug}`,
           metadata: { rank: newRank, company_id: company.id },
         });
+
+        if (company.email) {
+          sendRankAchievementEmail({
+            email: company.email,
+            companyName: company.company_name,
+            slug: company.slug || slug,
+            rank: newRank,
+          }).catch((err) => console.error("Error sending rank achievement email", err));
+        }
       }
     }
 
