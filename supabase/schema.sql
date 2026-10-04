@@ -98,3 +98,31 @@ create policy "Public read logos"
   using (bucket_id = 'logos');
 
 -- Uploads use the service role key. Do not allow public inserts.
+
+create table if not exists public.batch_milestones (
+  batch_name text primary key,
+  target_count int not null default 3000,
+  funding_amount int not null default 30000,
+  status text not null default 'open', -- 'open' | 'countdown' | 'completed'
+  countdown_started_at timestamptz,
+  countdown_ends_at timestamptz,
+  winner_company_id uuid references public.companies(id),
+  winner_finalized_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.companies add column if not exists is_batch_winner boolean not null default false;
+alter table public.companies add column if not exists winner_badge text;
+
+alter table public.batch_milestones enable row level security;
+
+drop policy if exists "Public can read batch milestones" on public.batch_milestones;
+create policy "Public can read batch milestones"
+  on public.batch_milestones
+  for select
+  using (true);
+
+insert into public.batch_milestones (batch_name, target_count, funding_amount, status)
+values ('Batch 1', 3000, 30000, 'open')
+on conflict (batch_name) do nothing;

@@ -48,9 +48,24 @@ export type Company = {
   is_top_company: boolean;
   upvotes_count?: number;
   extra_links?: SocialLink[];
+  is_batch_winner?: boolean;
+  winner_badge?: string | null;
   created_at: string;
   status: "live";
   user_id?: string | null;
+};
+
+export type BatchMilestone = {
+  batch_name: string;
+  target_count: number;
+  funding_amount: number;
+  status: "open" | "countdown" | "completed";
+  countdown_started_at: string | null;
+  countdown_ends_at: string | null;
+  winner_company_id: string | null;
+  winner_finalized_at: string | null;
+  created_at?: string;
+  updated_at?: string;
 };
 
 export type Comment = {

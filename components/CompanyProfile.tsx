@@ -305,7 +305,25 @@ export function CompanyProfile({ company }: { company: Company }) {
             <div style={{ minWidth: 0, flex: 1 }}>
               <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", marginBottom: "4px" }}>
                 <h1 style={{ wordBreak: "break-word", margin: 0 }}>{company.company_name}</h1>
-                {rank === 1 ? (
+                {company.is_batch_winner || company.winner_badge ? (
+                  <span
+                    className="pill pill-winner"
+                    title="Official Batch 1 Champion — $30,000 Equity-Free Winner"
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "5px",
+                      background: "linear-gradient(135deg, #fef08a 0%, #fde047 50%, #eab308 100%)",
+                      color: "#854d0e",
+                      border: "1px solid #ca8a04",
+                      fontWeight: 700,
+                      boxShadow: "0 1px 3px rgba(234, 179, 8, 0.3)",
+                    }}
+                  >
+                    <span>🏆</span>
+                    <span>{company.winner_badge || "Batch 1 Winner • $30,000 Equity-Free"}</span>
+                  </span>
+                ) : rank === 1 ? (
                   <span className="pill pill-gold" title="Rank 1 by upvotes" style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}>
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />

@@ -330,36 +330,40 @@ export function Header() {
           </button>
         </div>
 
-        <div className="nav-left">
-          <div className="nav-item">
-            <Link href="/about" className="nav-link">
-              About <Chevron />
-            </Link>
-            <div className="dropdown">
-              <Link href="/about">What is WhyAlligator?</Link>
-              <Link href="/add">{userStartupCount > 0 ? "Add more" : "Add startup"}</Link>
-              <Link href="/contact">Contact</Link>
+        {/* Left Spacer so centered navigation stays in the exact center of header */}
+        <div className="header-left-spacer" />
+
+        {/* Unified Center Navigation */}
+        <div className="header-center-nav">
+          <div className="nav-left">
+            <div className="nav-item">
+              <Link href="/about" className="nav-link">
+                About <Chevron />
+              </Link>
+              <div className="dropdown">
+                <Link href="/about">What is WhyAlligator?</Link>
+                <Link href="/add">{userStartupCount > 0 ? "Add more" : "Add startup"}</Link>
+                <Link href="/contact">Contact</Link>
+              </div>
             </div>
-          </div>
-          <div className="nav-item">
-            <Link href="/" className="nav-link">
-              Companies <Chevron />
-            </Link>
-            <div className="dropdown">
-              <Link href="/">Startup Directory</Link>
-              <Link href="/jobs">Startup Jobs</Link>
+            <div className="nav-item">
+              <Link href="/" className="nav-link">
+                Companies <Chevron />
+              </Link>
+              <div className="dropdown">
+                <Link href="/">Startup Directory</Link>
+                <Link href="/jobs">Startup Jobs</Link>
+              </div>
             </div>
+            <Link href="/library" className="nav-link">
+              Library
+            </Link>
           </div>
-          <Link href="/library" className="nav-link">
-            Library
+
+          <Link href="/" className="brand-mark" title="WhyAlligator" onClick={close}>
+            <Image src="/logo.png" alt="WhyAlligator" width={38} height={38} priority />
           </Link>
-        </div>
 
-        <Link href="/" className="brand-mark" title="WhyAlligator" onClick={close}>
-          <Image src="/logo.png" alt="WhyAlligator" width={40} height={40} priority />
-        </Link>
-
-        <div className="nav-right">
           <div className="nav-right-links">
             <Link href="/partners" className="nav-link">
               Partners
@@ -380,90 +384,96 @@ export function Header() {
               Startup Jobs
             </Link>
           </div>
-          <div className="header-actions">
-            {/* Desktop Notification Bell */}
-            <div style={{ position: "relative" }}>
-              <button
-                ref={notifBtnRef}
-                type="button"
-                onClick={() => setNotificationsOpen((prev) => !prev)}
-                className="login-link"
-                style={{
-                  position: "relative",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  padding: "6px 8px",
-                  background: notificationsOpen ? "#f3f4f6" : "transparent",
-                  borderRadius: "8px",
-                  border: "none",
-                  cursor: "pointer",
-                  color: unreadCount > 0 ? "#111827" : "#4b5563",
-                  transition: "all 0.15s ease",
-                }}
-                title={`Notifications ${unreadCount > 0 ? `(${unreadCount} unread)` : ""}`}
-                aria-expanded={notificationsOpen}
-                aria-haspopup="true"
-              >
-                <svg
-                  width="19"
-                  height="19"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                  <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                </svg>
-                {unreadCount > 0 ? (
-                  <span
-                    style={{
-                      position: "absolute",
-                      top: "2px",
-                      right: "2px",
-                      background: "#dc2626",
-                      color: "#fff",
-                      fontSize: "10px",
-                      fontWeight: 700,
-                      minWidth: "16px",
-                      height: "16px",
-                      borderRadius: "8px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      padding: "0 3px",
-                      boxShadow: "0 0 0 2px #fff",
-                      lineHeight: 1,
-                    }}
-                  >
-                    {unreadCount > 99 ? "99+" : unreadCount}
-                  </span>
-                ) : null}
-              </button>
-            </div>
+        </div>
 
-            {userEmail ? (
-              <Link href="/dashboard" className="login-link" title={userEmail}>
-                Profile
-              </Link>
-            ) : (
-              <>
-                <Link href="/login" className="login-link">
-                  Log in
-                </Link>
-                <Link href="/login?mode=signup" className="login-link">
-                  Sign up
-                </Link>
-              </>
-            )}
-            <Link href="/add" className="apply-btn">
-              {userStartupCount > 0 ? "Add more" : "Add startup"}
-            </Link>
+        {/* Far Right Header Actions: Notification Bell, Avatar Circle or Login, and Apply Button */}
+        <div className="header-actions">
+          {/* Desktop Notification Bell */}
+          <div style={{ position: "relative" }}>
+            <button
+              ref={notifBtnRef}
+              type="button"
+              onClick={() => setNotificationsOpen((prev) => !prev)}
+              className="login-link"
+              style={{
+                position: "relative",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "6px 8px",
+                background: notificationsOpen ? "#f3f4f6" : "transparent",
+                borderRadius: "8px",
+                border: "none",
+                cursor: "pointer",
+                color: unreadCount > 0 ? "#111827" : "#4b5563",
+                transition: "all 0.15s ease",
+              }}
+              title={`Notifications ${unreadCount > 0 ? `(${unreadCount} unread)` : ""}`}
+              aria-expanded={notificationsOpen}
+              aria-haspopup="true"
+            >
+              <svg
+                width="19"
+                height="19"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+              </svg>
+              {unreadCount > 0 ? (
+                <span
+                  style={{
+                    position: "absolute",
+                    top: "2px",
+                    right: "2px",
+                    background: "#dc2626",
+                    color: "#fff",
+                    fontSize: "10px",
+                    fontWeight: 700,
+                    minWidth: "16px",
+                    height: "16px",
+                    borderRadius: "8px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: "0 3px",
+                    boxShadow: "0 0 0 2px #fff",
+                    lineHeight: 1,
+                  }}
+                >
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
+              ) : null}
+            </button>
           </div>
+
+          {userEmail ? (
+            <Link
+              href="/dashboard"
+              className="header-avatar-circle"
+              title={`Profile (${userEmail})`}
+            >
+              {(userEmail[0] || "P").toUpperCase()}
+            </Link>
+          ) : (
+            <>
+              <Link href="/login" className="login-link">
+                Log in
+              </Link>
+              <Link href="/login?mode=signup" className="login-link">
+                Sign up
+              </Link>
+            </>
+          )}
+          <Link href="/add" className="apply-btn">
+            {userStartupCount > 0 ? "Add more" : "Add startup"}
+          </Link>
         </div>
 
         <button

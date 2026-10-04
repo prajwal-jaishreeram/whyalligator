@@ -18,8 +18,30 @@ export function CompanyCard({
   hasUpvoted?: boolean;
   isOwnCompany?: boolean;
 }) {
+  const winnerBadge = company.is_batch_winner || company.winner_badge ? (
+    <span
+      className="pill pill-winner"
+      title="Official Batch 1 Champion — $30,000 Equity-Free Winner"
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "4px",
+        background: "linear-gradient(135deg, #fef08a 0%, #fde047 50%, #eab308 100%)",
+        color: "#854d0e",
+        border: "1px solid #ca8a04",
+        fontWeight: 700,
+        boxShadow: "0 1px 3px rgba(234, 179, 8, 0.3)",
+      }}
+    >
+      <span>🏆</span>
+      <span>{company.winner_badge || "Batch 1 Winner • $30k"}</span>
+    </span>
+  ) : null;
+
   const topBadge =
-    rank === 1 ? (
+    winnerBadge ? (
+      winnerBadge
+    ) : rank === 1 ? (
       <span className="pill pill-gold" title="Rank 1 by upvotes" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />

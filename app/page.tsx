@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BatchCountdownBanner } from "@/components/BatchCountdownBanner";
 import { DirectoryClient } from "@/components/DirectoryClient";
 import { getLiveCompanies } from "@/lib/companies";
 
@@ -7,7 +8,7 @@ export const revalidate = 60;
 export const metadata = {
   title: "Startup Directory — Discover & Launch Real Startups | WhyAlligator",
   description:
-    "Y Combinator takes 1%. We back the other 99%. List your startup in Batch 1. When 3,000 startups join, an 8-hour countdown starts to award $30,000 in equity-free funding.",
+    "Y Combinator takes 1%. We back the other 99%. List in Batch 1. When 3,000 startups join, an 8-hour countdown begins and #1 wins $30,000 equity-free.",
 };
 
 export default async function HomePage() {
@@ -18,10 +19,8 @@ export default async function HomePage() {
       <section className="hero">
         <h1>Startup Directory</h1>
         <p className="hero-copy">
-          Y Combinator takes 1%. We back the other 99%. List your startup in
-          Batch 1 to get discovered by users, builders, and investors. Once Batch 1
-          fills to 3,000 startups, an 8-hour countdown begins and one startup wins{" "}
-          <strong>$30,000 in equity-free funding</strong>.
+          Y Combinator takes 1%. We back the other 99%.<br />
+          List in Batch 1 — when 3,000 startups join, an 8-hour countdown begins and #1 wins <strong>$30,000 equity-free</strong>.
         </p>
         <Link href="/add" className="hero-cta">
           Add your startup
@@ -47,6 +46,7 @@ export default async function HomePage() {
         </div>
       </section>
       <div className="page-width">
+        <BatchCountdownBanner initialTotalListings={companies.length} />
         <DirectoryClient companies={companies} />
       </div>
     </main>
