@@ -113,9 +113,20 @@ export default function DashboardPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editPitch, setEditPitch] = useState("");
+  const [editSlug, setEditSlug] = useState("");
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [editSuccess, setEditSuccess] = useState<string | null>(null);
+
+  // Company Username / Slug custom URL state per company
+  const [slugEditingCompanyId, setSlugEditingCompanyId] = useState<string | null>(null);
+  const [slugInput, setSlugInput] = useState<string>("");
+  const [slugChecking, setSlugChecking] = useState<boolean>(false);
+  const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null);
+  const [slugError, setSlugError] = useState<string | null>(null);
+  const [slugSaving, setSlugSaving] = useState<boolean>(false);
+  const [slugSuccessMsg, setSlugSuccessMsg] = useState<string | null>(null);
+  const [copiedSlugId, setCopiedSlugId] = useState<string | null>(null);
 
   // Settings: Profile state
   const [nameInput, setNameInput] = useState("");
@@ -220,21 +231,25 @@ export default function DashboardPage() {
       setNameInput(computed);
     }
 
-    // Role detection
-    const metaRole = (user.user_metadata?.role as "founder" | "user") || (compList.length > 0 ? "founder" : "user");
-    setUserRole(metaRole);
-
-    // Fetch user username from user_profiles or auth metadata
+    // Fetch user username & role from user_profiles
     const { data: profData } = await supabase
       .from("user_profiles")
-      .select("username")
+      .select("username, role")
       .eq("id", user.id)
       .maybeSingle();
+
     const existingUsername = profData?.username || (user.user_metadata?.username as string) || "";
     if (existingUsername) {
       setUsername(existingUsername);
       setUsernameInput(existingUsername);
     }
+
+    // Role detection: prioritize user_profiles.role, then auth metadata, then existing company list
+    const resolvedRole =
+      (profData?.role as "founder" | "user") ||
+      (user.user_metadata?.role as "founder" | "user") ||
+      (compList.length > 0 ? "founder" : "user");
+    setUserRole(resolvedRole);
 
     // Check query params for tab (e.g. ?tab=notifications)
     if (typeof window !== "undefined") {
@@ -242,6 +257,9 @@ export default function DashboardPage() {
       const tabParam = params.get("tab") as DashboardTab | null;
       if (tabParam && ["startups", "jobs", "upvoted", "notifications", "settings"].includes(tabParam)) {
         setActiveTab(tabParam);
+      } else {
+        // Community Member defaults to Upvoted tab; Founder defaults to Startups tab
+        setActiveTab(resolvedRole === "user" ? "upvoted" : "startups");
       }
     }
 
@@ -278,6 +296,7 @@ export default function DashboardPage() {
     setEditingId(company.id);
     setEditName(company.company_name);
     setEditPitch(company.pitch);
+    setEditSlug(company.slug || company.id);
     setEditError(null);
     setEditSuccess(null);
   }
@@ -286,6 +305,7 @@ export default function DashboardPage() {
     setEditingId(null);
     setEditName("");
     setEditPitch("");
+    setEditSlug("");
     setEditError(null);
   }
 
@@ -302,6 +322,12 @@ export default function DashboardPage() {
 
       const trimmedName = editName.trim();
       const trimmedPitch = editPitch.trim();
+      const trimmedSlug = editSlug
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9-]/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "");
 
       if (trimmedName.length < 2) {
         throw new Error("Company name must be at least 2 characters.");
@@ -320,6 +346,7 @@ export default function DashboardPage() {
         body: JSON.stringify({
           company_name: trimmedName,
           pitch: trimmedPitch,
+          slug: trimmedSlug || slug,
         }),
       });
 
@@ -328,11 +355,13 @@ export default function DashboardPage() {
         throw new Error(resData.error || "Failed to update.");
       }
 
+      const updatedSlug = resData.slug || trimmedSlug || company.slug || company.id;
+
       // Update local state
       setCompanies((prev) =>
         prev.map((c) =>
           c.id === company.id
-            ? { ...c, company_name: trimmedName, pitch: trimmedPitch }
+            ? { ...c, company_name: trimmedName, pitch: trimmedPitch, slug: updatedSlug }
             : c
         )
       );
@@ -344,6 +373,148 @@ export default function DashboardPage() {
       setEditError(err instanceof Error ? err.message : "Error saving.");
     } finally {
       setEditSaving(false);
+    }
+  }
+
+  function startEditSlug(company: Company) {
+    setSlugEditingCompanyId(company.id);
+    setSlugInput(company.slug || company.id);
+    setSlugAvailable(null);
+    setSlugError(null);
+  }
+
+  function cancelEditSlug() {
+    setSlugEditingCompanyId(null);
+    setSlugInput("");
+    setSlugAvailable(null);
+    setSlugError(null);
+  }
+
+  // Live debounced check for company username availability
+  useEffect(() => {
+    if (!slugEditingCompanyId) return;
+    const currentComp = companies.find((c) => c.id === slugEditingCompanyId);
+    const trimmed = slugInput
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "");
+
+    if (!trimmed) {
+      setSlugAvailable(null);
+      setSlugError(null);
+      return;
+    }
+
+    if (currentComp && (currentComp.slug || currentComp.id).toLowerCase() === trimmed) {
+      setSlugAvailable(true);
+      setSlugError(null);
+      return;
+    }
+
+    if (trimmed.length < 2) {
+      setSlugAvailable(false);
+      setSlugError("Username must be at least 2 characters");
+      return;
+    }
+
+    if (trimmed.length > 50) {
+      setSlugAvailable(false);
+      setSlugError("Username must be 50 characters or less");
+      return;
+    }
+
+    if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(trimmed)) {
+      setSlugAvailable(false);
+      setSlugError("Use only lowercase letters, numbers, and hyphens");
+      return;
+    }
+
+    setSlugChecking(true);
+    setSlugError(null);
+
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `/api/companies/check-slug?slug=${encodeURIComponent(trimmed)}&currentId=${encodeURIComponent(slugEditingCompanyId)}`
+        );
+        const data = await res.json();
+        if (data.available) {
+          setSlugAvailable(true);
+          setSlugError(null);
+        } else {
+          setSlugAvailable(false);
+          setSlugError(data.error || "This company username is not available");
+        }
+      } catch {
+        setSlugAvailable(null);
+      } finally {
+        setSlugChecking(false);
+      }
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [slugInput, slugEditingCompanyId, companies]);
+
+  async function handleSaveCompanySlug(company: Company) {
+    const cleanSlug = slugInput
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "");
+
+    if (!cleanSlug || cleanSlug.length < 2) {
+      setSlugError("Company username must be at least 2 characters");
+      return;
+    }
+
+    setSlugSaving(true);
+    setSlugError(null);
+
+    try {
+      const supabase = createBrowserClient();
+      const { data: authData } = await supabase.auth.getSession();
+      const token = authData.session?.access_token;
+      if (!token) throw new Error("Please log in to save company username.");
+
+      const currentSlug = company.slug || company.id;
+      const res = await fetch(`/api/companies/${currentSlug}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ slug: cleanSlug }),
+      });
+
+      const resData = await res.json();
+      if (!res.ok) {
+        throw new Error(resData.error || "Failed to update company username.");
+      }
+
+      const updatedSlug = resData.slug || cleanSlug;
+      setCompanies((prev) =>
+        prev.map((c) => (c.id === company.id ? { ...c, slug: updatedSlug } : c))
+      );
+
+      setSlugEditingCompanyId(null);
+      setSlugSuccessMsg(`Company link updated: https://www.whyalligator.com/companies/${updatedSlug}`);
+      setTimeout(() => setSlugSuccessMsg(null), 5000);
+    } catch (err: unknown) {
+      setSlugError(err instanceof Error ? err.message : "Error updating username.");
+    } finally {
+      setSlugSaving(false);
+    }
+  }
+
+  function handleCopyCompanyLink(company: Company) {
+    const url = `https://www.whyalligator.com/companies/${company.slug || company.id}`;
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(url);
+      setCopiedSlugId(company.id);
+      setTimeout(() => setCopiedSlugId(null), 2500);
     }
   }
 
@@ -690,27 +861,49 @@ export default function DashboardPage() {
     setRoleSwitching(true);
     setRoleMsg(null);
     try {
+      // 1. Instant optimistic UI update
+      setUserRole(targetRole);
+      switchTab(targetRole === "user" ? "upvoted" : "startups");
+      setRoleMsg(`Switched to ${targetRole === "founder" ? "Founder" : "Community Member"} profile!`);
+
       const supabase = createBrowserClient();
       const { data: authData } = await supabase.auth.getSession();
+      const user = authData.session?.user;
       const token = authData.session?.access_token;
-      if (!token) throw new Error("Please log in to switch role.");
 
-      const res = await fetch("/api/profile/role", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ role: targetRole }),
-      });
+      if (!user) throw new Error("Please log in to switch role.");
 
-      const resData = await res.json();
-      if (!res.ok) throw new Error(resData.error || "Failed to switch role.");
+      // 2. Direct client-side persistence in Supabase
+      await Promise.allSettled([
+        supabase.auth.updateUser({ data: { role: targetRole } }),
+        supabase.from("user_profiles").upsert({
+          id: user.id,
+          email: user.email,
+          role: targetRole,
+          updated_at: new Date().toISOString(),
+        }),
+      ]);
 
-      setUserRole(targetRole);
-      setRoleMsg(`Successfully switched to ${targetRole === "founder" ? "Founder" : "Community Member"} profile!`);
+      // 3. Resilient server API call with 4-second timeout
+      if (token) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
+        fetch("/api/profile/role", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ role: targetRole }),
+          signal: controller.signal,
+        })
+          .catch(() => {})
+          .finally(() => clearTimeout(timeoutId));
+      }
+
       setTimeout(() => setRoleMsg(null), 4000);
     } catch (err: unknown) {
+      console.error("Error switching role:", err);
       alert(err instanceof Error ? err.message : "Error switching profile role.");
     } finally {
       setRoleSwitching(false);
@@ -770,6 +963,23 @@ export default function DashboardPage() {
         </p>
 
         <div style={{ display: "flex", gap: "10px", justifyContent: "center", flexWrap: "wrap" }}>
+          {userRole === "founder" ? (
+            <Link
+              href="/add"
+              className="hero-cta"
+              style={{
+                margin: 0,
+                height: "36px",
+                padding: "0 18px",
+                fontSize: "13px",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+              }}
+            >
+              <span>+ List Startup</span>
+            </Link>
+          ) : null}
           <button
             type="button"
             className="ghost-btn"
@@ -783,6 +993,67 @@ export default function DashboardPage() {
       </section>
 
       <div className="page-width">
+        {/* Community Member Promotion Banner */}
+        {userRole === "user" && (
+          <div
+            style={{
+              background: "#f8fafc",
+              border: "1px solid #e2e8f0",
+              borderRadius: "14px",
+              padding: "18px 20px",
+              marginBottom: "20px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: "14px",
+            }}
+          >
+            <div style={{ maxWidth: "580px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                <span style={{ fontSize: "18px" }}>🚀</span>
+                <strong style={{ fontSize: "15px", color: "#0f172a" }}>
+                  Building a startup?
+                </strong>
+              </div>
+              <p style={{ margin: 0, fontSize: "13.5px", color: "#475569", lineHeight: 1.5 }}>
+                Switch to a Founder Profile to list your startup, publish open job postings, claim your custom company handle, and get discovered by thousands of tech users.
+              </p>
+            </div>
+            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
+              <Link
+                href="/add"
+                className="hero-cta"
+                style={{
+                  margin: 0,
+                  height: "36px",
+                  padding: "0 16px",
+                  fontSize: "13px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                }}
+              >
+                + List a Startup
+              </Link>
+              <button
+                type="button"
+                onClick={() => handleSwitchRole("founder")}
+                disabled={roleSwitching}
+                className="ghost-btn"
+                style={{
+                  height: "36px",
+                  fontSize: "13px",
+                  padding: "0 14px",
+                  cursor: "pointer",
+                  background: "#ffffff",
+                }}
+              >
+                {roleSwitching ? "Switching..." : "Switch to Founder"}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Dashboard Tabs & Actions */}
         {/* Mobile View: Quick Tab Dropdown for Ultra-Fast One-Tap Navigation */}
         <div className="mobile-dashboard-tab-dropdown-wrap" style={{ marginBottom: "16px" }}>
@@ -817,8 +1088,12 @@ export default function DashboardPage() {
                 boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
               }}
             >
-              <option value="startups">Your Startups ({companies.length})</option>
-              <option value="jobs">Job Listings ({allJobs.length})</option>
+              {userRole === "founder" && (
+                <>
+                  <option value="startups">Your Startups ({companies.length})</option>
+                  <option value="jobs">Job Listings ({allJobs.length})</option>
+                </>
+              )}
               <option value="upvoted">Upvoted Startups ({upvotedCompanies.length})</option>
               <option value="notifications">
                 Notifications {unreadCount > 0 ? `(${unreadCount} new)` : `(${notifications.length})`}
@@ -856,91 +1131,95 @@ export default function DashboardPage() {
             scrollbarWidth: "none",
           }}
         >
-          <button
-            type="button"
-            onClick={() => switchTab("startups")}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "8px",
-              padding: "10px 18px",
-              borderRadius: "9999px",
-              fontSize: "14px",
-              fontWeight: activeTab === "startups" ? 600 : 500,
-              cursor: "pointer",
-              whiteSpace: "nowrap",
-              flexShrink: 0,
-              border: activeTab === "startups" ? "1px solid #111827" : "1px solid #e5e7eb",
-              background: activeTab === "startups" ? "#111827" : "#f9fafb",
-              color: activeTab === "startups" ? "#ffffff" : "#4b5563",
-              boxShadow: activeTab === "startups" ? "0 2px 6px rgba(0,0,0,0.1)" : "none",
-              transition: "all 0.15s ease",
-            }}
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z" />
-              <path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z" />
-              <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0" />
-              <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5" />
-            </svg>
-            <span>Your Startups</span>
-            {companies.length > 0 ? (
-              <span
+          {userRole === "founder" && (
+            <>
+              <button
+                type="button"
+                onClick={() => switchTab("startups")}
                 style={{
-                  background: activeTab === "startups" ? "rgba(255,255,255,0.22)" : "#e5e7eb",
-                  color: activeTab === "startups" ? "#ffffff" : "#374151",
-                  padding: "1px 8px",
-                  borderRadius: "99px",
-                  fontSize: "12px",
-                  fontWeight: 700,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "10px 18px",
+                  borderRadius: "9999px",
+                  fontSize: "14px",
+                  fontWeight: activeTab === "startups" ? 600 : 500,
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                  flexShrink: 0,
+                  border: activeTab === "startups" ? "1px solid #111827" : "1px solid #e5e7eb",
+                  background: activeTab === "startups" ? "#111827" : "#f9fafb",
+                  color: activeTab === "startups" ? "#ffffff" : "#4b5563",
+                  boxShadow: activeTab === "startups" ? "0 2px 6px rgba(0,0,0,0.1)" : "none",
+                  transition: "all 0.15s ease",
                 }}
               >
-                {companies.length}
-              </span>
-            ) : null}
-          </button>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z" />
+                  <path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z" />
+                  <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0" />
+                  <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5" />
+                </svg>
+                <span>Your Startups</span>
+                {companies.length > 0 ? (
+                  <span
+                    style={{
+                      background: activeTab === "startups" ? "rgba(255,255,255,0.22)" : "#e5e7eb",
+                      color: activeTab === "startups" ? "#ffffff" : "#374151",
+                      padding: "1px 8px",
+                      borderRadius: "99px",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {companies.length}
+                  </span>
+                ) : null}
+              </button>
 
-          <button
-            type="button"
-            onClick={() => switchTab("jobs")}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "8px",
-              padding: "10px 18px",
-              borderRadius: "9999px",
-              fontSize: "14px",
-              fontWeight: activeTab === "jobs" ? 600 : 500,
-              cursor: "pointer",
-              whiteSpace: "nowrap",
-              flexShrink: 0,
-              border: activeTab === "jobs" ? "1px solid #111827" : "1px solid #e5e7eb",
-              background: activeTab === "jobs" ? "#111827" : "#f9fafb",
-              color: activeTab === "jobs" ? "#ffffff" : "#4b5563",
-              boxShadow: activeTab === "jobs" ? "0 2px 6px rgba(0,0,0,0.1)" : "none",
-              transition: "all 0.15s ease",
-            }}
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect width="20" height="14" x="2" y="7" rx="2" ry="2" />
-              <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
-            </svg>
-            <span>Job Listings</span>
-            {allJobs.length > 0 ? (
-              <span
+              <button
+                type="button"
+                onClick={() => switchTab("jobs")}
                 style={{
-                  background: activeTab === "jobs" ? "rgba(255,255,255,0.22)" : "#e5e7eb",
-                  color: activeTab === "jobs" ? "#ffffff" : "#374151",
-                  padding: "1px 8px",
-                  borderRadius: "99px",
-                  fontSize: "12px",
-                  fontWeight: 700,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "10px 18px",
+                  borderRadius: "9999px",
+                  fontSize: "14px",
+                  fontWeight: activeTab === "jobs" ? 600 : 500,
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                  flexShrink: 0,
+                  border: activeTab === "jobs" ? "1px solid #111827" : "1px solid #e5e7eb",
+                  background: activeTab === "jobs" ? "#111827" : "#f9fafb",
+                  color: activeTab === "jobs" ? "#ffffff" : "#4b5563",
+                  boxShadow: activeTab === "jobs" ? "0 2px 6px rgba(0,0,0,0.1)" : "none",
+                  transition: "all 0.15s ease",
                 }}
               >
-                {allJobs.length}
-              </span>
-            ) : null}
-          </button>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect width="20" height="14" x="2" y="7" rx="2" ry="2" />
+                  <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+                </svg>
+                <span>Job Listings</span>
+                {allJobs.length > 0 ? (
+                  <span
+                    style={{
+                      background: activeTab === "jobs" ? "rgba(255,255,255,0.22)" : "#e5e7eb",
+                      color: activeTab === "jobs" ? "#ffffff" : "#374151",
+                      padding: "1px 8px",
+                      borderRadius: "99px",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {allJobs.length}
+                  </span>
+                ) : null}
+              </button>
+            </>
+          )}
 
           <button
             type="button"
@@ -1098,6 +1377,23 @@ export default function DashboardPage() {
             }}
           >
             ✓ {editSuccess}
+          </div>
+        ) : null}
+
+        {slugSuccessMsg ? (
+          <div
+            style={{
+              background: "#f0fdf4",
+              border: "1px solid #bbf7d0",
+              padding: "12px 16px",
+              borderRadius: "8px",
+              marginBottom: "16px",
+              color: "#15803d",
+              fontSize: "14px",
+              fontWeight: 500,
+            }}
+          >
+            ✓ {slugSuccessMsg}
           </div>
         ) : null}
 
@@ -1313,6 +1609,40 @@ export default function DashboardPage() {
                           />
                         </div>
 
+                        <div>
+                          <label
+                            style={{
+                              display: "block",
+                              fontSize: "13px",
+                              fontWeight: 500,
+                              marginBottom: "4px",
+                              color: "#374151",
+                            }}
+                          >
+                            Company URL / Username
+                          </label>
+                          <input
+                            value={editSlug}
+                            onChange={(e) => setEditSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                            placeholder="username"
+                            maxLength={50}
+                            required
+                            style={{
+                              width: "100%",
+                              boxSizing: "border-box",
+                              padding: "10px 12px",
+                              fontSize: "14px",
+                              fontFamily: "monospace",
+                              border: "1px solid #d1d5db",
+                              borderRadius: "8px",
+                              background: "#fff",
+                            }}
+                          />
+                          <span style={{ fontSize: "12px", color: "#6b7280", marginTop: "3px", display: "block" }}>
+                            https://www.whyalligator.com/companies/{editSlug || "username"}
+                          </span>
+                        </div>
+
                         <div
                           style={{
                             display: "flex",
@@ -1404,7 +1734,12 @@ export default function DashboardPage() {
                                 fontSize: "14px",
                                 color: "var(--muted)",
                                 wordBreak: "break-word",
-                                lineHeight: 1.4,
+                                lineHeight: 1.45,
+                                display: "-webkit-box",
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: "vertical",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
                               }}
                             >
                               {company.pitch}
@@ -1418,7 +1753,7 @@ export default function DashboardPage() {
                             className="ghost-btn"
                             style={{ height: "36px", fontSize: "13px", display: "inline-flex", alignItems: "center", gap: "6px" }}
                             onClick={() => startQuickEdit(company)}
-                            title="Quick edit name and pitch"
+                            title="Quick edit name, pitch, and URL"
                           >
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                               <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
@@ -1448,6 +1783,152 @@ export default function DashboardPage() {
                         </div>
                       </div>
                     )}
+
+                    {/* Custom Company URL / Handle Section */}
+                    <div
+                      style={{
+                        background: "#f8fafc",
+                        border: "1px solid #e2e8f0",
+                        borderRadius: "10px",
+                        padding: "10px 14px",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "8px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          flexWrap: "wrap",
+                          gap: "10px",
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", minWidth: 0 }}>
+                          <span
+                            style={{
+                              fontSize: "11px",
+                              fontWeight: 700,
+                              color: "#64748b",
+                              textTransform: "uppercase",
+                              letterSpacing: "0.05em",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "4px",
+                            }}
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                            </svg>
+                            Company URL:
+                          </span>
+                          <a
+                            href={`/companies/${company.slug || company.id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              fontSize: "13px",
+                              fontWeight: 500,
+                              color: "#0284c7",
+                              textDecoration: "underline",
+                              wordBreak: "break-all",
+                            }}
+                            title="Open company page"
+                          >
+                            https://www.whyalligator.com/companies/{company.slug || company.id}
+                          </a>
+                        </div>
+
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                          <button
+                            type="button"
+                            onClick={() => handleCopyCompanyLink(company)}
+                            className="ghost-btn"
+                            style={{ height: "30px", fontSize: "12px", padding: "0 10px", cursor: "pointer", background: "#ffffff" }}
+                          >
+                            {copiedSlugId === company.id ? "✓ Copied!" : "Copy Link"}
+                          </button>
+                          {slugEditingCompanyId !== company.id ? (
+                            <button
+                              type="button"
+                              onClick={() => startEditSlug(company)}
+                              className="ghost-btn"
+                              style={{ height: "30px", fontSize: "12px", padding: "0 10px", cursor: "pointer", background: "#ffffff" }}
+                            >
+                              Change Username
+                            </button>
+                          ) : null}
+                        </div>
+                      </div>
+
+                      {/* Inline Slug Editor */}
+                      {slugEditingCompanyId === company.id ? (
+                        <form
+                          onSubmit={(e) => {
+                            e.preventDefault();
+                            handleSaveCompanySlug(company);
+                          }}
+                          style={{
+                            marginTop: "4px",
+                            paddingTop: "10px",
+                            borderTop: "1px dashed #cbd5e1",
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "8px",
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                            <span style={{ fontSize: "12.5px", color: "#64748b", fontFamily: "monospace" }}>
+                              whyalligator.com/companies/
+                            </span>
+                            <input
+                              type="text"
+                              value={slugInput}
+                              onChange={(e) => setSlugInput(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                              placeholder="username"
+                              maxLength={50}
+                              required
+                              style={{
+                                padding: "6px 10px",
+                                fontSize: "13px",
+                                border: slugAvailable === false ? "1.5px solid #dc2626" : slugAvailable === true ? "1.5px solid #16a34a" : "1px solid #cbd5e1",
+                                borderRadius: "6px",
+                                minWidth: "160px",
+                                outline: "none",
+                              }}
+                            />
+                            <button
+                              type="submit"
+                              disabled={slugSaving || slugAvailable === false || slugChecking}
+                              className="hero-cta"
+                              style={{ height: "32px", fontSize: "12px", padding: "0 12px", margin: 0 }}
+                            >
+                              {slugSaving ? "Saving..." : "Save URL"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={cancelEditSlug}
+                              className="ghost-btn"
+                              style={{ height: "32px", fontSize: "12px", padding: "0 10px" }}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+
+                          <div style={{ fontSize: "12px", minHeight: "16px" }}>
+                            {slugChecking ? (
+                              <span style={{ color: "#64748b" }}>Checking handle availability...</span>
+                            ) : slugAvailable === true ? (
+                              <span style={{ color: "#16a34a", fontWeight: 500 }}>✓ Username available!</span>
+                            ) : slugError ? (
+                              <span style={{ color: "#dc2626", fontWeight: 500 }}>✗ {slugError}</span>
+                            ) : null}
+                          </div>
+                        </form>
+                      ) : null}
+                    </div>
 
                     {/* Company meta pills */}
                     <div

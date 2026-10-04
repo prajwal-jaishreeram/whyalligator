@@ -55,6 +55,7 @@ export default function EditCompanyPage() {
   const [initialWebsiteUrl, setInitialWebsiteUrl] = useState("");
   const [showResetWarningModal, setShowResetWarningModal] = useState(false);
   const [companyName, setCompanyName] = useState("");
+  const [companySlug, setCompanySlug] = useState("");
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [pitch, setPitch] = useState("");
@@ -254,6 +255,7 @@ export default function EditCompanyPage() {
       setCompany(data as Company);
       setCompanyName(data.company_name || "");
       setInitialCompanyName(data.company_name || "");
+      setCompanySlug(data.slug || slug);
       setLogoUrl(data.logo_url || null);
       setPartnerEmails(partnerEmailsList.join(", "));
       setPitch(data.pitch || "");
@@ -398,8 +400,16 @@ export default function EditCompanyPage() {
       const token = authData.session?.access_token;
       if (!token) throw new Error("Please log in to save changes.");
 
+      const cleanSlug = companySlug
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9-]/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "");
+
       const updatePayload = {
         company_name: companyName.trim(),
+        slug: cleanSlug || slug,
         logo_url: logoUrl,
         pitch: pitch.trim(),
         description: description.trim(),
@@ -437,9 +447,10 @@ export default function EditCompanyPage() {
         throw new Error(resData.error || "Failed to update company.");
       }
 
+      const finalSlug = resData.slug || cleanSlug || slug;
       setSuccess(true);
       setTimeout(() => {
-        router.push(`/companies/${slug}`);
+        router.push(`/companies/${finalSlug}`);
       }, 1500);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Error saving changes.");
@@ -643,6 +654,25 @@ export default function EditCompanyPage() {
                         ⚠️ Warning: Changing company name will reset upvotes, comments, and rank to 0!
                       </span>
                     )}
+                  </label>
+
+                  <label className="yc-field-label">
+                    <span style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span>Company URL / Username <strong className="yc-req">*</strong></span>
+                      <span style={{ fontSize: "12px", color: "var(--muted)", fontWeight: 400 }}>Custom public URL</span>
+                    </span>
+                    <input
+                      name="company_slug"
+                      value={companySlug}
+                      onChange={(e) => setCompanySlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                      placeholder="e.g. your-brand"
+                      maxLength={50}
+                      required
+                      style={{ fontFamily: "monospace" }}
+                    />
+                    <span style={{ fontSize: "12px", color: "#64748b", marginTop: "3px", display: "block" }}>
+                      Public URL: https://www.whyalligator.com/companies/{companySlug || "username"}
+                    </span>
                   </label>
 
                   <div className="yc-field-label">

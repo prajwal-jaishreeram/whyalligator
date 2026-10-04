@@ -2,7 +2,25 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
 
-export const runtime = "nodejs";
+const RESERVED_SLUGS = new Set([
+  "new",
+  "edit",
+  "api",
+  "admin",
+  "jobs",
+  "about",
+  "login",
+  "signup",
+  "dashboard",
+  "resources",
+  "companies",
+  "static",
+  "_next",
+  "favicon.ico",
+  "sitemap.xml",
+  "robots.txt",
+  "check-slug",
+]);
 
 export async function PUT(
   request: Request,
@@ -13,11 +31,11 @@ export async function PUT(
     const body = await request.json();
     const admin = createAdminClient();
 
-    // Verify company exists
+    // Verify company exists (match by slug or id)
     const { data: company, error: fetchError } = await admin
       .from("companies")
       .select("id, user_id, email, slug, partner_emails, company_name, website_url, upvotes_count")
-      .eq("slug", slug)
+      .or(`slug.eq.${slug},id.eq.${slug}`)
       .maybeSingle();
 
     if (fetchError || !company) {
@@ -83,6 +101,48 @@ export async function PUT(
       updateData.user_id = user.id; // Claim ownership if not yet linked
     }
 
+    // Company username / custom URL slug update
+    if (typeof body.slug === "string") {
+      const cleanSlug = body.slug
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9-]/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "");
+
+      if (cleanSlug.length < 2 || cleanSlug.length > 50) {
+        return NextResponse.json(
+          { error: "Company username/URL must be between 2 and 50 characters." },
+          { status: 400 }
+        );
+      }
+
+      if (RESERVED_SLUGS.has(cleanSlug)) {
+        return NextResponse.json(
+          { error: `The username "${cleanSlug}" is reserved. Please pick another name.` },
+          { status: 400 }
+        );
+      }
+
+      if (cleanSlug !== company.slug) {
+        const { data: existingCompany } = await admin
+          .from("companies")
+          .select("id")
+          .eq("slug", cleanSlug)
+          .neq("id", company.id)
+          .maybeSingle();
+
+        if (existingCompany) {
+          return NextResponse.json(
+            { error: `The company username "${cleanSlug}" is already taken.` },
+            { status: 409 }
+          );
+        }
+
+        updateData.slug = cleanSlug;
+      }
+    }
+
     // Rule: After reaching 25 upvotes, if user edits company_name or website_url,
     // their upvotes, comments, and rank are reset back to 0.
     const currentUpvotes = Number(company.upvotes_count) || 0;
@@ -124,10 +184,13 @@ export async function PUT(
       return NextResponse.json({ error: "Failed to update company" }, { status: 500 });
     }
 
+    const finalSlug = (updateData.slug as string) || company.slug || slug;
     revalidatePath("/");
+    revalidatePath("/companies");
     revalidatePath(`/companies/${slug}`);
+    revalidatePath(`/companies/${finalSlug}`);
 
-    return NextResponse.json({ success: true, slug, resetTriggered: resetOccurred });
+    return NextResponse.json({ success: true, slug: finalSlug, resetTriggered: resetOccurred });
   } catch (err) {
     console.error(err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

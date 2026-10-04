@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase";
 
-export const runtime = "nodejs";
-
 export async function POST(request: Request) {
   try {
     const authHeader = request.headers.get("Authorization");
@@ -22,16 +20,8 @@ export async function POST(request: Request) {
     const body = await request.json();
     const newRole = body.role === "founder" ? "founder" : "user";
 
-    // Update user metadata in auth.users
-    await admin.auth.admin.updateUserById(user.id, {
-      user_metadata: {
-        ...user.user_metadata,
-        role: newRole,
-      },
-    });
-
-    // Upsert user_profiles table
-    await admin.from("user_profiles").upsert({
+    // 1. Update user_profiles table (primary database record)
+    const { error: profileErr } = await admin.from("user_profiles").upsert({
       id: user.id,
       email: user.email,
       full_name: user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split("@")[0],
@@ -39,8 +29,25 @@ export async function POST(request: Request) {
       updated_at: new Date().toISOString(),
     });
 
+    if (profileErr) {
+      console.error("user_profiles upsert error:", profileErr);
+    }
+
+    // 2. Update user metadata in auth.users (non-blocking)
+    try {
+      await admin.auth.admin.updateUserById(user.id, {
+        user_metadata: {
+          ...user.user_metadata,
+          role: newRole,
+        },
+      });
+    } catch (metaErr) {
+      console.warn("auth.admin.updateUserById failed:", metaErr);
+    }
+
     return NextResponse.json({ success: true, role: newRole });
   } catch (err: unknown) {
+    console.error("Role update API error:", err);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Failed to update role" },
       { status: 500 }
