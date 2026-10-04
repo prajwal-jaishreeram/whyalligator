@@ -170,29 +170,71 @@ function AuthForm() {
 
   return (
     <main>
-      <section className="hero">
-        <h1>
+      <section
+        style={{
+          textAlign: "center",
+          padding: "20px 20px 14px",
+        }}
+      >
+        <h1
+          style={{
+            margin: 0,
+            fontFamily: 'var(--font-source-serif), "Source Serif 4", serif',
+            fontSize: "36px",
+            fontWeight: 500,
+            fontStyle: "italic",
+            letterSpacing: "-0.8px",
+            lineHeight: 1.2,
+          }}
+        >
           {mode === "login"
             ? "Log in to WhyAlligator"
             : "Create your account"}
         </h1>
-        <p className="hero-copy">
+        <p
+          style={{
+            margin: "6px auto 0",
+            maxWidth: "480px",
+            fontSize: "14px",
+            fontWeight: 300,
+            lineHeight: "20px",
+            color: "var(--muted)",
+          }}
+        >
           {mode === "login"
             ? "Sign in to view, edit, and manage your startup listings."
             : "Register with your email to claim and update your startup on WhyAlligator."}
         </p>
       </section>
 
-      <div className="page-width narrow">
-        <div className="form-card">
-          {error ? <p className="form-error">{error}</p> : null}
+      <div
+        style={{
+          maxWidth: "420px",
+          margin: "0 auto",
+          padding: "0 16px 20px",
+        }}
+      >
+        <div
+          className="form-card"
+          style={{
+            padding: "18px 22px",
+            borderRadius: "8px",
+            background: "var(--card)",
+            border: "0.8px solid var(--line)",
+          }}
+        >
+          {error ? (
+            <p className="form-error" style={{ marginBottom: "10px", fontSize: "13px" }}>
+              {error}
+            </p>
+          ) : null}
           {message ? (
             <p
               style={{
                 color: "#16a34a",
-                fontSize: "14px",
+                fontSize: "13px",
                 fontWeight: 500,
-                marginBottom: "16px",
+                marginBottom: "10px",
               }}
             >
               {message}
@@ -208,15 +250,15 @@ function AuthForm() {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              gap: "10px",
+              gap: "8px",
               width: "100%",
-              height: "44px",
-              minHeight: "44px",
+              height: "38px",
+              minHeight: "38px",
               borderRadius: "6px",
               border: "1px solid var(--search-border)",
               backgroundColor: "#ffffff",
               color: "var(--ink)",
-              fontSize: "14px",
+              fontSize: "13px",
               fontWeight: 500,
               cursor: loading || googleLoading ? "not-allowed" : "pointer",
               transition: "all 0.15s ease",
@@ -239,9 +281,9 @@ function AuthForm() {
               display: "flex",
               alignItems: "center",
               textAlign: "center",
-              margin: "18px 0",
+              margin: "10px 0",
               color: "var(--muted)",
-              fontSize: "13px",
+              fontSize: "12px",
             }}
           >
             <div
@@ -250,7 +292,7 @@ function AuthForm() {
                 borderBottom: "1px solid var(--line)",
               }}
             />
-            <span style={{ padding: "0 12px" }}>or continue with email</span>
+            <span style={{ padding: "0 10px" }}>or continue with email</span>
             <div
               style={{
                 flex: 1,
@@ -259,8 +301,8 @@ function AuthForm() {
             />
           </div>
 
-          <form className="add-form" onSubmit={handleSubmit}>
-            <label>
+          <form className="add-form" onSubmit={handleSubmit} style={{ display: "grid", gap: "10px" }}>
+            <label style={{ display: "grid", gap: "3px", fontSize: "13px", fontWeight: 500 }}>
               Email address
               <input
                 type="email"
@@ -273,12 +315,12 @@ function AuthForm() {
                 style={{
                   display: "block",
                   width: "100%",
-                  height: "44px",
-                  minHeight: "44px",
-                  maxHeight: "44px",
+                  height: "38px",
+                  minHeight: "38px",
+                  maxHeight: "38px",
                   boxSizing: "border-box",
-                  padding: "10px 14px",
-                  fontSize: "15px",
+                  padding: "6px 12px",
+                  fontSize: "14px",
                   lineHeight: "normal",
                   borderRadius: "6px",
                   border: "1px solid var(--search-border)",
@@ -288,7 +330,7 @@ function AuthForm() {
               />
             </label>
 
-            <label>
+            <label style={{ display: "grid", gap: "3px", fontSize: "13px", fontWeight: 500 }}>
               Password
               <input
                 type="password"
@@ -304,12 +346,12 @@ function AuthForm() {
                 style={{
                   display: "block",
                   width: "100%",
-                  height: "44px",
-                  minHeight: "44px",
-                  maxHeight: "44px",
+                  height: "38px",
+                  minHeight: "38px",
+                  maxHeight: "38px",
                   boxSizing: "border-box",
-                  padding: "10px 14px",
-                  fontSize: "15px",
+                  padding: "6px 12px",
+                  fontSize: "14px",
                   lineHeight: "normal",
                   borderRadius: "6px",
                   border: "1px solid var(--search-border)",
@@ -322,31 +364,34 @@ function AuthForm() {
             {mode === "signup" && password.length > 0 ? (
               <div
                 style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "4px",
-                  marginTop: "-4px",
-                  marginBottom: "8px",
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "2px 8px",
+                  margin: "0 0 2px 0",
+                  background: "#f9fafb",
+                  padding: "5px 8px",
+                  borderRadius: "5px",
+                  border: "1px solid #f3f4f6",
                 }}
               >
                 <PasswordRequirement
                   met={hasMinLength}
-                  label="At least 8 characters"
+                  label="8+ characters"
                 />
                 <PasswordRequirement
                   met={hasUppercase}
-                  label="One uppercase letter"
+                  label="1 uppercase"
                 />
                 <PasswordRequirement
                   met={hasLowercase}
-                  label="One lowercase letter"
+                  label="1 lowercase"
                 />
-                <PasswordRequirement met={hasNumber} label="One number" />
+                <PasswordRequirement met={hasNumber} label="1 number" />
               </div>
             ) : null}
 
             {mode === "signup" ? (
-              <label>
+              <label style={{ display: "grid", gap: "3px", fontSize: "13px", fontWeight: 500 }}>
                 Confirm password
                 <input
                   type="password"
@@ -360,12 +405,12 @@ function AuthForm() {
                   style={{
                     display: "block",
                     width: "100%",
-                    height: "44px",
-                    minHeight: "44px",
-                    maxHeight: "44px",
+                    height: "38px",
+                    minHeight: "38px",
+                    maxHeight: "38px",
                     boxSizing: "border-box",
-                    padding: "10px 14px",
-                    fontSize: "15px",
+                    padding: "6px 12px",
+                    fontSize: "14px",
                     lineHeight: "normal",
                     borderRadius: "6px",
                     border: "1px solid var(--search-border)",
@@ -376,9 +421,9 @@ function AuthForm() {
                 {confirmPassword.length > 0 ? (
                   <span
                     style={{
-                      fontSize: "13px",
+                      fontSize: "12px",
                       color: passwordsMatch ? "#16a34a" : "#dc2626",
-                      marginTop: "4px",
+                      marginTop: "2px",
                       display: "block",
                     }}
                   >
@@ -393,7 +438,13 @@ function AuthForm() {
             <button
               type="submit"
               className="hero-cta"
-              style={{ width: "100%", marginTop: "8px" }}
+              style={{
+                width: "100%",
+                height: "40px",
+                marginTop: "4px",
+                fontSize: "15px",
+                borderRadius: "6px",
+              }}
               disabled={
                 loading ||
                 (mode === "signup" && (!passwordStrong || !passwordsMatch))
@@ -409,13 +460,13 @@ function AuthForm() {
             <div
               style={{
                 textAlign: "center",
-                marginTop: "16px",
-                fontSize: "14px",
+                marginTop: "8px",
+                fontSize: "13px",
                 color: "var(--muted)",
               }}
             >
               {mode === "login" ? (
-                <p>
+                <p style={{ margin: 0 }}>
                   Don&apos;t have an account?{" "}
                   <button
                     type="button"
@@ -438,7 +489,7 @@ function AuthForm() {
                   </button>
                 </p>
               ) : (
-                <p>
+                <p style={{ margin: 0 }}>
                   Already have an account?{" "}
                   <button
                     type="button"

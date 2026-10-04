@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { Company } from "@/lib/types";
 import { companyAnchor } from "@/lib/companies";
@@ -19,6 +20,45 @@ import { createBrowserClient, hasSupabaseConfig } from "@/lib/supabase";
 type SortKey = "top_voted" | "newest" | "oldest" | "name";
 
 const lower = (value: string) => value.trim().toLowerCase();
+
+const PLACEHOLDER_CLAIM_SPOTS = [
+  {
+    spot: 1,
+    name: "Your Brand",
+    pitch: "Be the #1 startup listed on WhyAlligator. Claim this spot to get discovered by founders and investors.",
+    location: "Your City / Remote",
+    industries: ["AI", "B2B"],
+    badgeClass: "pill pill-gold",
+    badgeLabel: "#1 Spot Available",
+  },
+  {
+    spot: 2,
+    name: "Your Brand",
+    pitch: "Showcase your product, find your first 1,000 users, and collect upvotes from the community.",
+    location: "Your City / Remote",
+    industries: ["SaaS", "Engineering"],
+    badgeClass: "pill pill-silver",
+    badgeLabel: "#2 Spot Available",
+  },
+  {
+    spot: 3,
+    name: "Your Brand",
+    pitch: "Launch your project to the other 99%. Claim your permanent listing and climb the leaderboard.",
+    location: "Your City / Remote",
+    industries: ["Consumer", "Fintech"],
+    badgeClass: "pill pill-bronze",
+    badgeLabel: "#3 Spot Available",
+  },
+  {
+    spot: 4,
+    name: "Your Brand",
+    pitch: "Get verified backlinks, organic traffic, and community validation. Add your startup in 2 minutes.",
+    location: "Your City / Remote",
+    industries: ["Productivity", "Developer Tools"],
+    badgeClass: "pill pill-top-10",
+    badgeLabel: "#4 Spot Available",
+  },
+];
 
 export function DirectoryClient({ companies }: { companies: Company[] }) {
   const [companyList, setCompanyList] = useState<Company[]>(companies);
@@ -550,21 +590,152 @@ export function DirectoryClient({ companies }: { companies: Company[] }) {
         ) : null}
 
         <p className="showing" aria-live="polite">
-          Showing {filtered.length} of {companies.length} companies
+          {companies.length === 0
+            ? "Batch 1 is open — 4 priority spots available to claim below"
+            : `Showing ${filtered.length} of ${companies.length} companies`}
         </p>
         <div className="results-box">
-          {filtered.length === 0 ? (
+          {companies.length === 0 ? (
+            <div className="placeholder-spots-wrap" style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "12px 16px",
+                  background: "#fffbeb",
+                  border: "1px dashed #f59e0b",
+                  borderRadius: "8px",
+                  marginBottom: "4px",
+                  gap: "12px",
+                  flexWrap: "wrap",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span style={{ fontSize: "18px" }}>🐊</span>
+                  <span style={{ fontSize: "14px", fontWeight: 600, color: "#92400e" }}>
+                    Batch 1 is live — Claim a top rank spot and showcase your product!
+                  </span>
+                </div>
+                <Link
+                  href="/add"
+                  style={{
+                    fontSize: "13px",
+                    fontWeight: 700,
+                    background: "#111827",
+                    color: "#ffffff",
+                    padding: "6px 14px",
+                    borderRadius: "6px",
+                    textDecoration: "none",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  Add Your Startup ($20) →
+                </Link>
+              </div>
+
+              {PLACEHOLDER_CLAIM_SPOTS.map((slot) => (
+                <Link
+                  key={slot.spot}
+                  href="/add"
+                  className="company-row is-placeholder-row"
+                  style={{
+                    cursor: "pointer",
+                    borderStyle: "dashed",
+                    borderColor: "#d1d5db",
+                    background: "#fafaf8",
+                    transition: "all 0.15s ease",
+                    textDecoration: "none",
+                  }}
+                  title="Click to claim this spot and add your startup"
+                >
+                  <div className="company-corner-badge">
+                    <span className={slot.badgeClass} style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                      <span>{slot.badgeLabel}</span>
+                    </span>
+                  </div>
+
+                  <div className="company-logo-wrap">
+                    <div
+                      className="company-logo"
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        background: "#ffffff",
+                        border: "1.5px dashed #9ca3af",
+                        color: "#6b7280",
+                        fontSize: "13px",
+                        fontWeight: 700,
+                        letterSpacing: "0.5px",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      Logo
+                    </div>
+                  </div>
+
+                  <div className="company-copy">
+                    <div className="company-titleline">
+                      <span className="company-name" style={{ color: "#111827", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                        {slot.name}
+                        <span style={{ fontSize: "12px", fontWeight: 500, color: "#ea580c" }}>
+                          (Available)
+                        </span>
+                      </span>
+                      <span className="company-location" style={{ color: "#64748b" }}>{slot.location}</span>
+                    </div>
+
+                    <p className="company-pitch" style={{ color: "#4b5563" }}>
+                      {slot.pitch}
+                    </p>
+
+                    <div className="pill-row">
+                      <span className="pill pill-batch">Batch 1</span>
+                      <span className="pill pill-status" style={{ background: "#ecfdf5", color: "#047857", fontWeight: 600 }}>
+                        Claim Spot
+                      </span>
+                      <span className="pill-desktop-only">
+                        <span className={slot.badgeClass}>{slot.badgeLabel}</span>
+                      </span>
+                      {slot.industries.map((ind) => (
+                        <span className="pill" key={ind} style={{ borderStyle: "dashed", color: "#6b7280" }}>
+                          {ind}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="company-upvote-wrap">
+                    <div
+                      className="company-upvote-btn"
+                      style={{
+                        background: "#111827",
+                        borderColor: "#111827",
+                        color: "#ffffff",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: "6px 8px",
+                      }}
+                      title="Click to claim this spot ($20)"
+                    >
+                      <span className="upvote-arrow" style={{ color: "#ffffff", fontSize: "11px" }}>▲</span>
+                      <span className="upvote-num" style={{ color: "#ffffff", fontSize: "11px", fontWeight: 700 }}>
+                        Claim
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : filtered.length === 0 ? (
             <div className="empty-state">
-              {companies.length === 0 ? (
-                "No companies yet. Pay $20 and be the first listing."
-              ) : (
-                <>
-                  No companies match those filters.{" "}
-                  <button type="button" className="clear-all-filters" onClick={clearAll}>
-                    Clear all filters
-                  </button>
-                </>
-              )}
+              No companies match those filters.{" "}
+              <button type="button" className="clear-all-filters" onClick={clearAll}>
+                Clear all filters
+              </button>
             </div>
           ) : (
             filtered.map((company) => {

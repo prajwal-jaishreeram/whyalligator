@@ -746,6 +746,12 @@ select {
   background: #f7f7f1;
 }
 
+.company-row.is-placeholder-row:hover {
+  background: #ffffff !important;
+  border-color: #111827 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
 .company-row.is-highlighted {
   outline: 2px solid var(--orange);
   outline-offset: -2px;
