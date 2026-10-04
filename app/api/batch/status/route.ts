@@ -67,30 +67,43 @@ export async function GET(request: Request) {
         .eq("batch_name", "Batch 1");
     }
 
-    // 4. Fetch the real-time top-voted startup
+    // 4. Fetch the real-time top-voted startup strictly within Batch 1
+    // Filter to live Batch 1 startups and sort strictly by upvotes_count descending, then earliest created_at for tie-breaker
     const { data: leadingList } = await admin
       .from("companies")
-      .select("id, slug, company_name, email, pitch, logo_url, upvotes_count, batch, is_batch_winner, winner_badge")
+      .select("id, slug, company_name, email, pitch, logo_url, upvotes_count, batch, is_batch_winner, winner_badge, created_at")
       .eq("status", "live")
+      .or("batch.eq.Batch 1,batch.eq.The Other 99%")
       .order("upvotes_count", { ascending: false })
       .order("created_at", { ascending: true })
       .limit(1);
 
     const leadingCompany = leadingList?.[0] || null;
 
-    // 5. Automatic transition: finalize winner when 8-hour countdown expires
+    // 5. Automatic transition: finalize winner ONLY when 8-hour countdown has officially expired
     let winnerCompany = null;
     if (currentStatus === "countdown" && countdownEndsAt && Date.now() >= countdownEndsAt) {
       currentStatus = "completed";
       const now = new Date();
 
       if (leadingCompany) {
-        // Automatically grant the winner badge
+        // Double-check real vote counts from company_upvotes table to ensure no discrepancy
+        const { count: verifiedVoteCount } = await admin
+          .from("company_upvotes")
+          .select("*", { count: "exact", head: true })
+          .eq("company_id", leadingCompany.id);
+
+        const officialWinningVotes = typeof verifiedVoteCount === "number" && verifiedVoteCount > 0
+          ? verifiedVoteCount
+          : (leadingCompany.upvotes_count || 0);
+
+        // Synchronize and lock the verified winner badge on the champion company
         await admin
           .from("companies")
           .update({
             is_batch_winner: true,
             winner_badge: "Batch 1 Winner • $30,000 Equity-Free",
+            upvotes_count: officialWinningVotes,
           })
           .eq("id", leadingCompany.id);
 
@@ -98,9 +111,11 @@ export async function GET(request: Request) {
           ...leadingCompany,
           is_batch_winner: true,
           winner_badge: "Batch 1 Winner • $30,000 Equity-Free",
+          upvotes_count: officialWinningVotes,
         };
 
-        await admin
+        // Atomically finalize the milestone in the database (guards against duplicate email dispatch)
+        const { data: updatedMilestone } = await admin
           .from("batch_milestones")
           .update({
             status: "completed",
@@ -108,18 +123,22 @@ export async function GET(request: Request) {
             winner_finalized_at: now.toISOString(),
             updated_at: now.toISOString(),
           })
-          .eq("batch_name", "Batch 1");
+          .eq("batch_name", "Batch 1")
+          .is("winner_company_id", null) // Atomic check: only update if winner was not already finalized
+          .select()
+          .maybeSingle();
 
-        // Send official winner congratulations email to the winning startup founder
-        if (leadingCompany.email) {
+        // Send official winner congratulations email to the genuine #1 startup founder ONLY if newly finalized
+        if (updatedMilestone && leadingCompany.email) {
+          console.log(`[Batch 1 Winner] Officially finalizing ${leadingCompany.company_name} with ${officialWinningVotes} votes. Sending award email to ${leadingCompany.email}`);
           sendWinnerCongratulationsEmail({
             email: leadingCompany.email,
             companyName: leadingCompany.company_name,
             slug: leadingCompany.slug,
             batchName: "Batch 1",
             grantAmount: milestone.funding_amount || 30000,
-            upvotesCount: leadingCompany.upvotes_count || 0,
-          }).catch((e) => console.error("Failed to send winner email:", e));
+            upvotesCount: officialWinningVotes,
+          }).catch((e) => console.error("[Batch 1 Winner Email Error]", e));
         }
       } else {
         await admin
