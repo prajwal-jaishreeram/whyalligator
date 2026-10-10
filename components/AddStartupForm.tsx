@@ -1191,14 +1191,6 @@ export function AddStartupForm() {
   if (!loggedInUser) {
     return (
       <div style={{ maxWidth: "480px", margin: "40px auto", padding: "0 16px" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px", fontSize: "12px" }}>
-          <span style={{ fontWeight: 600, color: "var(--ink)", padding: "4px 10px", background: "#f3f4f6", borderRadius: "20px" }}>1. Create Account</span>
-          <span style={{ color: "var(--muted)" }}>→</span>
-          <span style={{ color: "var(--muted)" }}>2. Pay $20</span>
-          <span style={{ color: "var(--muted)" }}>→</span>
-          <span style={{ color: "var(--muted)" }}>3. List Startup</span>
-        </div>
-
         <div
           className="form-card"
           style={{
@@ -1209,9 +1201,6 @@ export function AddStartupForm() {
           }}
         >
           <div style={{ textAlign: "center", marginBottom: "20px" }}>
-            <span className="pill pill-batch" style={{ marginBottom: "8px", display: "inline-block" }}>
-              Step 1 of 3
-            </span>
             <h1
               style={{
                 fontFamily: 'var(--font-source-serif), "Source Serif 4", serif',
@@ -1378,14 +1367,6 @@ export function AddStartupForm() {
   if (loggedInUser && credits === 0) {
     return (
       <div style={{ maxWidth: "520px", margin: "40px auto", padding: "0 16px" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px", fontSize: "12px" }}>
-          <span style={{ color: "#16a34a", fontWeight: 600 }}>✓ 1. Account</span>
-          <span style={{ color: "var(--muted)" }}>→</span>
-          <span style={{ fontWeight: 600, color: "var(--ink)", padding: "4px 10px", background: "#fef3c7", borderRadius: "20px" }}>2. Pay $20 to Unlock</span>
-          <span style={{ color: "var(--muted)" }}>→</span>
-          <span style={{ color: "var(--muted)" }}>3. List Startup</span>
-        </div>
-
         <div
           className="form-card"
           style={{
@@ -1483,15 +1464,6 @@ export function AddStartupForm() {
   // SCREEN 3: Form unlocked! User has paid and can fill details to launch
   return (
     <form ref={formRef} className="yc-app-shell" onSubmit={onSubmit}>
-      {/* Top Unlocked Slot Notification */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px", fontSize: "12px" }}>
-        <span style={{ color: "#16a34a", fontWeight: 600 }}>✓ 1. Account</span>
-        <span style={{ color: "var(--muted)" }}>→</span>
-        <span style={{ color: "#16a34a", fontWeight: 600 }}>✓ 2. Paid Slot Unlocked</span>
-        <span style={{ color: "var(--muted)" }}>→</span>
-        <span style={{ fontWeight: 600, color: "var(--ink)", padding: "4px 10px", background: "#dcfce7", borderRadius: "20px" }}>3. Startup Details (Active)</span>
-      </div>
-
       {/* App Header for Mobile / Tablet */}
       <div className="yc-mobile-header">
         <div className="yc-mobile-meta">
