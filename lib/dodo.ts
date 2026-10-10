@@ -45,6 +45,22 @@ export async function createCheckoutSession(input: {
   return JSON.parse(text) as { session_id: string; checkout_url: string };
 }
 
+export async function getPayment(paymentId: string): Promise<any> {
+  try {
+    const response = await fetch(`${apiBase()}/payments/${paymentId}`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${env("DODO_PAYMENTS_API_KEY")}`,
+      },
+    });
+    if (!response.ok) return null;
+    return await response.json();
+  } catch (err) {
+    console.error("Failed to fetch payment:", err);
+    return null;
+  }
+}
+
 const WEBHOOK_TOLERANCE_SECONDS = 5 * 60;
 
 function base64ToBytes(value: string): Uint8Array<ArrayBuffer> {

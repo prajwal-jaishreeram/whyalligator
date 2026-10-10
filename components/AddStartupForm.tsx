@@ -229,15 +229,24 @@ export function AddStartupForm() {
   const [authChecking, setAuthChecking] = useState(true);
 
   // Inline auth for unauthenticated users
+  const [authEmailInput, setAuthEmailInput] = useState("");
   const [authMode, setAuthMode] = useState<"signup" | "login">("signup");
   const [authPassword, setAuthPassword] = useState("");
   const [authConfirmPassword, setAuthConfirmPassword] = useState("");
   const [authNotice, setAuthNotice] = useState<string | null>(null);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   // Verification / OTP state
   const [verifyingEmail, setVerifyingEmail] = useState(false);
   const [otpCode, setOtpCode] = useState("");
   const [otpVerifying, setOtpVerifying] = useState(false);
+
+  // Paid listing slot state (Pay First flow)
+  const [credits, setCredits] = useState<number>(0);
+  const [creditsLoading, setCreditsLoading] = useState<boolean>(true);
+  const [payingSlot, setPayingSlot] = useState<boolean>(false);
+  const [slotError, setSlotError] = useState<string | null>(null);
 
   // Password strength checks
   const hasMinLength = authPassword.length >= 8;
@@ -259,6 +268,7 @@ export function AddStartupForm() {
       if (u?.email) {
         setLoggedInUser({ id: u.id, email: u.email });
         setEmail(u.email);
+        setAuthEmailInput(u.email);
         setAuthToken(data.session?.access_token ?? null);
       }
       setAuthChecking(false);
@@ -269,11 +279,13 @@ export function AddStartupForm() {
       if (u?.email) {
         setLoggedInUser({ id: u.id, email: u.email });
         setEmail(u.email);
+        setAuthEmailInput(u.email);
         setAuthToken(session?.access_token ?? null);
         setVerifyingEmail(false);
       } else {
         setLoggedInUser(null);
         setAuthToken(null);
+        setCredits(0);
       }
     });
 
@@ -281,6 +293,35 @@ export function AddStartupForm() {
       authListener.subscription.unsubscribe();
     };
   }, []);
+
+  // Check paid listing slot credits whenever user is authenticated
+  useEffect(() => {
+    if (!loggedInUser || !authToken) {
+      setCredits(0);
+      setCreditsLoading(false);
+      return;
+    }
+    setCreditsLoading(true);
+    const search = typeof window !== "undefined" ? window.location.search : "";
+    const params = new URLSearchParams(search);
+    const paymentId = params.get("payment_id");
+
+    fetch(`/api/user/credits${paymentId ? `?payment_id=${encodeURIComponent(paymentId)}` : ""}`, {
+      headers: {
+        Authorization: `Bearer ${authToken}`,
+      },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        setCredits(data.credits || 0);
+      })
+      .catch((err) => {
+        console.error("Credits query error:", err);
+      })
+      .finally(() => {
+        setCreditsLoading(false);
+      });
+  }, [loggedInUser, authToken]);
 
   const draftRestoredRef = useRef(false);
 
@@ -747,19 +788,24 @@ export function AddStartupForm() {
       if (token) {
         headers["Authorization"] = `Bearer ${token}`;
       }
-      const response = await fetch("/api/checkout", {
+      const response = await fetch("/api/companies/publish", {
         method: "POST",
         headers,
         body: data,
       });
       const payload = (await response.json()) as {
-        url?: string;
+        success?: boolean;
+        slug?: string;
         error?: string;
       };
-      if (!response.ok || !payload.url) {
-        throw new Error(payload.error || "Could not start checkout.");
+      if (!response.ok || !payload.slug) {
+        throw new Error(payload.error || "Could not publish startup.");
       }
-      window.location.href = payload.url;
+      try {
+        localStorage.removeItem(DRAFT_STORAGE_KEY);
+        localStorage.removeItem(LEGACY_DRAFT_KEY);
+      } catch {}
+      window.location.href = `/companies/${payload.slug}`;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
       setPending(false);
@@ -793,6 +839,11 @@ export function AddStartupForm() {
     let currentUserId = loggedInUser?.id || null;
     let currentUserEmail = (loggedInUser?.email || email).trim();
     let currentToken = authToken;
+
+    if (loggedInUser && currentToken) {
+      await executeCheckout(event.currentTarget, loggedInUser.id, currentUserEmail, currentToken);
+      return;
+    }
 
     // IF NOT LOGGED IN: Authenticate the user first!
     if (!loggedInUser) {
@@ -1003,8 +1054,444 @@ export function AddStartupForm() {
     }
   };
 
+  async function handleGoogleSignIn() {
+    setGoogleLoading(true);
+    setError(null);
+    try {
+      const supabase = createBrowserClient();
+      const redirectUrl =
+        typeof window !== "undefined"
+          ? `${window.location.origin}/auth/callback?next=${encodeURIComponent("/add")}`
+          : "/add";
+      const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: redirectUrl },
+      });
+      if (oauthError) throw oauthError;
+      if (data?.url) window.location.href = data.url;
+    } catch (err: any) {
+      setError(err?.message || "Failed to connect to Google.");
+      setGoogleLoading(false);
+    }
+  }
+
+  async function handleAuthGateSubmit(e: FormEvent) {
+    e.preventDefault();
+    setAuthLoading(true);
+    setError(null);
+    setAuthNotice(null);
+    const targetEmail = authEmailInput.trim();
+    if (!targetEmail) {
+      setError("Please enter your email.");
+      setAuthLoading(false);
+      return;
+    }
+    const supabase = createBrowserClient();
+    try {
+      if (authMode === "signup") {
+        if (!passwordStrong) {
+          setError("Password must be at least 8 characters with 1 uppercase, 1 lowercase, and 1 number.");
+          setAuthLoading(false);
+          return;
+        }
+        if (authPassword !== authConfirmPassword) {
+          setError("Passwords do not match.");
+          setAuthLoading(false);
+          return;
+        }
+        const { data, error: signUpErr } = await supabase.auth.signUp({
+          email: targetEmail,
+          password: authPassword,
+        });
+        if (signUpErr) {
+          if (
+            signUpErr.message.toLowerCase().includes("already registered") ||
+            signUpErr.message.toLowerCase().includes("already exists")
+          ) {
+            setAuthMode("login");
+            setError("Account already exists. Please enter your password to log in.");
+            setAuthLoading(false);
+            return;
+          }
+          throw signUpErr;
+        }
+        if (data.session) {
+          setLoggedInUser({ id: data.session.user.id, email: targetEmail });
+          setEmail(targetEmail);
+          setAuthToken(data.session.access_token);
+        } else {
+          setAuthNotice("Account created! Please check your email to verify your address, then log in.");
+        }
+      } else {
+        const { data, error: signInErr } = await supabase.auth.signInWithPassword({
+          email: targetEmail,
+          password: authPassword,
+        });
+        if (signInErr) throw signInErr;
+        if (data.session) {
+          setLoggedInUser({ id: data.session.user.id, email: targetEmail });
+          setEmail(targetEmail);
+          setAuthToken(data.session.access_token);
+        }
+      }
+    } catch (err: any) {
+      setError(err?.message || "Authentication error");
+    } finally {
+      setAuthLoading(false);
+    }
+  }
+
+  async function handlePaySlot() {
+    if (!authToken || !loggedInUser) return;
+    setPayingSlot(true);
+    setSlotError(null);
+    try {
+      const res = await fetch("/api/checkout/slot", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+          "Content-Type": "application/json",
+        },
+      });
+      const data = await res.json();
+      if (!res.ok || !data.url) {
+        throw new Error(data.error || "Could not start checkout.");
+      }
+      window.location.href = data.url;
+    } catch (err: any) {
+      setSlotError(err?.message || "Failed to start payment.");
+      setPayingSlot(false);
+    }
+  }
+
+  // Loading state
+  if (authChecking || (loggedInUser && creditsLoading)) {
+    return (
+      <div
+        className="form-card"
+        style={{
+          padding: "60px 24px",
+          textAlign: "center",
+          maxWidth: "520px",
+          margin: "40px auto",
+          borderRadius: "8px",
+          background: "var(--card)",
+          border: "1px solid var(--line)",
+        }}
+      >
+        <div className="hero-pulse-dot" style={{ margin: "0 auto 12px" }} />
+        <p style={{ color: "var(--muted)", fontSize: "14px", margin: 0 }}>
+          Checking account &amp; listing slot status…
+        </p>
+      </div>
+    );
+  }
+
+  // SCREEN 1: User needs to create an account or sign in with email first
+  if (!loggedInUser) {
+    return (
+      <div style={{ maxWidth: "480px", margin: "40px auto", padding: "0 16px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px", fontSize: "12px" }}>
+          <span style={{ fontWeight: 600, color: "var(--ink)", padding: "4px 10px", background: "#f3f4f6", borderRadius: "20px" }}>1. Create Account</span>
+          <span style={{ color: "var(--muted)" }}>→</span>
+          <span style={{ color: "var(--muted)" }}>2. Pay $20</span>
+          <span style={{ color: "var(--muted)" }}>→</span>
+          <span style={{ color: "var(--muted)" }}>3. List Startup</span>
+        </div>
+
+        <div
+          className="form-card"
+          style={{
+            padding: "24px",
+            borderRadius: "8px",
+            background: "var(--card)",
+            border: "1px solid var(--line)",
+          }}
+        >
+          <div style={{ textAlign: "center", marginBottom: "20px" }}>
+            <span className="pill pill-batch" style={{ marginBottom: "8px", display: "inline-block" }}>
+              Step 1 of 3
+            </span>
+            <h1
+              style={{
+                fontFamily: 'var(--font-source-serif), "Source Serif 4", serif',
+                fontSize: "28px",
+                margin: "4px 0 6px",
+                fontWeight: 500,
+              }}
+            >
+              {authMode === "signup" ? "Create your account" : "Log in to WhyAlligator"}
+            </h1>
+            <p style={{ color: "var(--muted)", fontSize: "13px", margin: 0 }}>
+              Sign up with email to unlock your Batch 1 listing slot and manage your startup.
+            </p>
+          </div>
+
+          {error ? (
+            <p className="form-error" style={{ marginBottom: "12px", fontSize: "13px" }}>
+              {error}
+            </p>
+          ) : null}
+          {authNotice ? (
+            <p style={{ color: "#16a34a", fontSize: "13px", fontWeight: 500, marginBottom: "12px" }}>
+              {authNotice}
+            </p>
+          ) : null}
+
+          {/* Google Sign In */}
+          <button
+            type="button"
+            onClick={handleGoogleSignIn}
+            disabled={googleLoading || authLoading}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+              width: "100%",
+              height: "40px",
+              borderRadius: "6px",
+              border: "1px solid var(--search-border)",
+              backgroundColor: "#ffffff",
+              color: "var(--ink)",
+              fontSize: "13px",
+              fontWeight: 500,
+              cursor: googleLoading ? "not-allowed" : "pointer",
+              boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
+            }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
+              <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.24v3.15C3.26 21.4 7.34 24 12 24z"/>
+              <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.24C.45 8.16 0 9.94 0 12s.45 3.84 1.24 5.42l4.04-3.15z"/>
+              <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.6 1.24 6.58l4.04 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+            </svg>
+            <span>{googleLoading ? "Connecting..." : "Continue with Google"}</span>
+          </button>
+
+          <div style={{ display: "flex", alignItems: "center", margin: "14px 0", color: "var(--muted)", fontSize: "12px" }}>
+            <div style={{ flex: 1, borderBottom: "1px solid var(--line)" }} />
+            <span style={{ padding: "0 10px" }}>or continue with email</span>
+            <div style={{ flex: 1, borderBottom: "1px solid var(--line)" }} />
+          </div>
+
+          <form onSubmit={handleAuthGateSubmit} style={{ display: "grid", gap: "12px" }}>
+            <label style={{ display: "grid", gap: "3px", fontSize: "13px", fontWeight: 500 }}>
+              Email address
+              <input
+                type="email"
+                required
+                value={authEmailInput}
+                onChange={(e) => setAuthEmailInput(e.target.value)}
+                placeholder="founder@example.com"
+                style={{
+                  height: "38px",
+                  padding: "6px 12px",
+                  fontSize: "14px",
+                  borderRadius: "6px",
+                  border: "1px solid var(--search-border)",
+                }}
+              />
+            </label>
+
+            <label style={{ display: "grid", gap: "3px", fontSize: "13px", fontWeight: 500 }}>
+              Password
+              <input
+                type="password"
+                required
+                minLength={authMode === "signup" ? 8 : 6}
+                value={authPassword}
+                onChange={(e) => setAuthPassword(e.target.value)}
+                placeholder="••••••••"
+                style={{
+                  height: "38px",
+                  padding: "6px 12px",
+                  fontSize: "14px",
+                  borderRadius: "6px",
+                  border: "1px solid var(--search-border)",
+                }}
+              />
+            </label>
+
+            {authMode === "signup" ? (
+              <label style={{ display: "grid", gap: "3px", fontSize: "13px", fontWeight: 500 }}>
+                Confirm Password
+                <input
+                  type="password"
+                  required
+                  minLength={8}
+                  value={authConfirmPassword}
+                  onChange={(e) => setAuthConfirmPassword(e.target.value)}
+                  placeholder="••••••••"
+                  style={{
+                    height: "38px",
+                    padding: "6px 12px",
+                    fontSize: "14px",
+                    borderRadius: "6px",
+                    border: "1px solid var(--search-border)",
+                  }}
+                />
+              </label>
+            ) : null}
+
+            <button
+              type="submit"
+              className="hero-cta"
+              disabled={authLoading}
+              style={{ width: "100%", height: "40px", fontSize: "14px", marginTop: "4px" }}
+            >
+              {authLoading ? "Please wait..." : authMode === "signup" ? "Create Account & Continue" : "Log In & Continue"}
+            </button>
+          </form>
+
+          <div style={{ textAlign: "center", marginTop: "12px", fontSize: "13px", color: "var(--muted)" }}>
+            {authMode === "signup" ? (
+              <p style={{ margin: 0 }}>
+                Already have an account?{" "}
+                <button
+                  type="button"
+                  onClick={() => { setAuthMode("login"); setError(null); }}
+                  style={{ background: "none", border: "none", color: "var(--ink)", fontWeight: 500, cursor: "pointer", textDecoration: "underline" }}
+                >
+                  Log in
+                </button>
+              </p>
+            ) : (
+              <p style={{ margin: 0 }}>
+                Don&apos;t have an account?{" "}
+                <button
+                  type="button"
+                  onClick={() => { setAuthMode("signup"); setError(null); }}
+                  style={{ background: "none", border: "none", color: "var(--ink)", fontWeight: 500, cursor: "pointer", textDecoration: "underline" }}
+                >
+                  Sign up
+                </button>
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // SCREEN 2: User must make payment first ($20) to unlock the form
+  if (loggedInUser && credits === 0) {
+    return (
+      <div style={{ maxWidth: "520px", margin: "40px auto", padding: "0 16px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px", fontSize: "12px" }}>
+          <span style={{ color: "#16a34a", fontWeight: 600 }}>✓ 1. Account</span>
+          <span style={{ color: "var(--muted)" }}>→</span>
+          <span style={{ fontWeight: 600, color: "var(--ink)", padding: "4px 10px", background: "#fef3c7", borderRadius: "20px" }}>2. Pay $20 to Unlock</span>
+          <span style={{ color: "var(--muted)" }}>→</span>
+          <span style={{ color: "var(--muted)" }}>3. List Startup</span>
+        </div>
+
+        <div
+          className="form-card"
+          style={{
+            padding: "26px",
+            borderRadius: "8px",
+            background: "var(--card)",
+            border: "1px solid var(--line)",
+          }}
+        >
+          <div style={{ textAlign: "center", marginBottom: "20px" }}>
+            <span className="pill pill-gold" style={{ marginBottom: "8px", display: "inline-block", fontWeight: 700 }}>
+              Batch 1 Listing Slot
+            </span>
+            <h1
+              style={{
+                fontFamily: 'var(--font-source-serif), "Source Serif 4", serif',
+                fontSize: "28px",
+                margin: "4px 0 6px",
+                fontWeight: 500,
+              }}
+            >
+              Unlock your listing slot
+            </h1>
+            <p style={{ color: "var(--muted)", fontSize: "13px", margin: 0 }}>
+              Pay once to unlock the submission form. You keep 100% equity.
+            </p>
+          </div>
+
+          {slotError ? (
+            <p className="form-error" style={{ marginBottom: "14px", fontSize: "13px" }}>
+              {slotError}
+            </p>
+          ) : null}
+
+          {/* Pricing Box */}
+          <div
+            style={{
+              background: "#fafafa",
+              border: "1px solid var(--line)",
+              borderRadius: "8px",
+              padding: "18px 20px",
+              marginBottom: "18px",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: "12px" }}>
+              <span style={{ fontSize: "14px", fontWeight: 600 }}>1x Startup Listing</span>
+              <span style={{ fontSize: "26px", fontWeight: 700, color: "var(--ink)" }}>
+                $20 <span style={{ fontSize: "13px", fontWeight: 400, color: "var(--muted)" }}>one-time</span>
+              </span>
+            </div>
+
+            <ul style={{ margin: 0, padding: "0 0 0 16px", fontSize: "13px", color: "var(--ink)", lineHeight: 1.8 }}>
+              <li>🐊 Permanent listing on WhyAlligator startup directory</li>
+              <li>🏆 Automatically eligible for the <strong>$30,000 Equity-Free Grant</strong></li>
+              <li>🚀 Continuous customer discovery &amp; high-authority SEO backlinks</li>
+              <li>💼 Dedicated company profile with founder bios &amp; job board</li>
+              <li>⚡ Immediate live publication upon form submission</li>
+            </ul>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px", fontSize: "12px", color: "var(--muted)", padding: "0 4px" }}>
+            <span>Logged in as: <strong>{loggedInUser.email}</strong></span>
+            <button
+              type="button"
+              onClick={async () => {
+                const supabase = createBrowserClient();
+                await supabase.auth.signOut();
+                setLoggedInUser(null);
+                setAuthToken(null);
+              }}
+              style={{ background: "none", border: "none", color: "var(--muted)", textDecoration: "underline", cursor: "pointer", fontSize: "12px" }}
+            >
+              Switch account
+            </button>
+          </div>
+
+          <button
+            type="button"
+            className="hero-cta"
+            onClick={handlePaySlot}
+            disabled={payingSlot}
+            style={{ width: "100%", height: "42px", fontSize: "15px", borderRadius: "6px" }}
+          >
+            {payingSlot ? "Redirecting to checkout…" : "Pay $20 & Unlock Startup Form →"}
+          </button>
+
+          <p style={{ textAlign: "center", fontSize: "12px", color: "var(--muted)", marginTop: "12px", marginBottom: 0 }}>
+            Secure checkout via Dodo Payments. No recurring fees.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // SCREEN 3: Form unlocked! User has paid and can fill details to launch
   return (
     <form ref={formRef} className="yc-app-shell" onSubmit={onSubmit}>
+      {/* Top Unlocked Slot Notification */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px", fontSize: "12px" }}>
+        <span style={{ color: "#16a34a", fontWeight: 600 }}>✓ 1. Account</span>
+        <span style={{ color: "var(--muted)" }}>→</span>
+        <span style={{ color: "#16a34a", fontWeight: 600 }}>✓ 2. Paid Slot Unlocked</span>
+        <span style={{ color: "var(--muted)" }}>→</span>
+        <span style={{ fontWeight: 600, color: "var(--ink)", padding: "4px 10px", background: "#dcfce7", borderRadius: "20px" }}>3. Startup Details (Active)</span>
+      </div>
+
       {/* App Header for Mobile / Tablet */}
       <div className="yc-mobile-header">
         <div className="yc-mobile-meta">
@@ -2521,9 +3008,9 @@ export function AddStartupForm() {
 
               <div
                 style={{
-                  background: "#eff6ff",
-                  border: "1px solid #bfdbfe",
-                  color: "#1e40af",
+                  background: "#f0fdf4",
+                  border: "1px solid #bbf7d0",
+                  color: "#166534",
                   padding: "14px 16px",
                   borderRadius: "8px",
                   margin: "12px 0 16px",
@@ -2531,37 +3018,14 @@ export function AddStartupForm() {
                   lineHeight: "1.6",
                 }}
               >
-                <strong>🧪 Test Mode Payment Instructions:</strong>
-                <div style={{ marginTop: "6px" }}>
-                  Dodo detected your location as <strong>India (INR ₹)</strong>. In test mode, you must use designated test credentials:
-                  <ul style={{ margin: "6px 0 0 18px", padding: 0 }}>
-                    <li>
-                      <strong>Indian Card (Visa):</strong>{" "}
-                      <code style={{ background: "#dbeafe", padding: "1px 6px", borderRadius: "3px" }}>4576 2389 1277 1450</code>{" "}
-                      (Expiry: <code>06/32</code>, CVV: <code>123</code>)
-                    </li>
-                    <li>
-                      <strong>Indian Card (Mastercard):</strong>{" "}
-                      <code style={{ background: "#dbeafe", padding: "1px 6px", borderRadius: "3px" }}>5409 1626 6938 1034</code>{" "}
-                      (Expiry: <code>06/32</code>, CVV: <code>123</code>)
-                    </li>
-                    <li>
-                      <strong>UPI:</strong> Enter VPA <code>success@upi</code>
-                    </li>
-                    <li>
-                      <strong>US / Global Card:</strong>{" "}
-                      <code style={{ background: "#dbeafe", padding: "1px 6px", borderRadius: "3px" }}>4242 4242 4242 4242</code>{" "}
-                      (requires changing Billing Country to <em>United States</em> on the checkout screen)
-                    </li>
-                  </ul>
-                  <span style={{ fontSize: "12px", color: "#1d4ed8", display: "block", marginTop: "6px" }}>
-                    ⚠️ <em>Entering random card numbers or real debit/credit cards in test mode will be rejected by the payment gateway.</em>
-                  </span>
-                </div>
+                <strong>✓ Paid Listing Slot Active (Batch 1)</strong>
+                <p style={{ margin: "4px 0 0 0", color: "#15803d" }}>
+                  Your $20 listing slot is verified. Clicking &quot;Launch Startup Now&quot; will immediately publish your startup to the WhyAlligator directory and enter you into the $30,000 Equity-Free Grant competition.
+                </p>
               </div>
 
               <p className="yc-fineprint">
-                Flat $20, one time. No recurring charges. Your startup page goes live immediately once payment clears. Newest first, no ranking.
+                Your startup page goes live immediately. Newest first, no ranking. We will also email you a confirmation link.
               </p>
             </div>
           </div>
@@ -2592,26 +3056,13 @@ export function AddStartupForm() {
               >
                 Next step ›
               </button>
-            ) : verifyingEmail ? (
-              <button
-                type="button"
-                className="yc-submit-btn"
-                onClick={handleVerifyOtp}
-                disabled={otpVerifying || otpCode.length < 6 || !agreedToTerms}
-              >
-                {otpVerifying ? "Verifying…" : "Verify & Pay $20"}
-              </button>
             ) : (
               <button
                 type="submit"
                 className="yc-submit-btn"
-                disabled={
-                  pending ||
-                  !agreedToTerms ||
-                  (!loggedInUser && authMode === "signup" && (!passwordStrong || !passwordsMatch))
-                }
+                disabled={pending || !agreedToTerms}
               >
-                {pending ? "Preparing checkout…" : "Submit & Pay $20"}
+                {pending ? "Publishing startup…" : "🚀 Launch Startup Now"}
               </button>
             )}
           </div>

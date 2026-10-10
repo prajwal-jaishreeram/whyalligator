@@ -58,6 +58,30 @@ export async function POST(request: Request) {
   }
 
   const supabase = createAdminClient();
+
+  // If this payment was for unlocking a listing slot
+  if (event.data?.metadata?.type === "listing_slot") {
+    const userId = event.data?.metadata?.user_id;
+    const { data: existingSlot } = await supabase
+      .from("pending_listings")
+      .select("id")
+      .filter("payload->>payment_id", "eq", paymentId)
+      .maybeSingle();
+
+    if (!existingSlot) {
+      await supabase.from("pending_listings").insert({
+        payload: {
+          type: "paid_slot",
+          user_id: userId,
+          payment_id: paymentId,
+          email: event.data?.metadata?.email || "",
+          created_at: new Date().toISOString(),
+        },
+      });
+    }
+    return NextResponse.json({ received: true, slot: true });
+  }
+
   const pendingId = event.data?.metadata?.pending_id?.trim();
 
   // Idempotency: Dodo may retry the same event.
