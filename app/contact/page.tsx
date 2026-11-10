@@ -1,7 +1,13 @@
 import type { Metadata } from "next";
 import { ProsePage } from "@/components/ProsePage";
 
-export const metadata: Metadata = { title: "Contact | WhyAlligator" };
+export const metadata: Metadata = {
+  title: "Contact",
+  description: "Get in touch with the WhyAlligator support team at hello@whyalligator.com.",
+  alternates: {
+    canonical: "https://www.whyalligator.com/contact",
+  },
+};
 
 export default function ContactPage() {
   return (

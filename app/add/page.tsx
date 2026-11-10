@@ -2,9 +2,12 @@ import { AddStartupForm } from "@/components/AddStartupForm";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Add your startup | WhyAlligator",
+  title: "Add your startup",
   description:
     "Launch your startup on WhyAlligator. List for $20 once, reach active customers & investors, and compete in Batch 1 for a $30,000 equity-free grant.",
+  alternates: {
+    canonical: "https://www.whyalligator.com/add",
+  },
 };
 
 export default async function AddPage({

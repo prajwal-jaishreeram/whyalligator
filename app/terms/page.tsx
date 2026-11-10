@@ -2,7 +2,11 @@ import type { Metadata } from "next";
 import { ProsePage } from "@/components/ProsePage";
 
 export const metadata: Metadata = {
-  title: "Terms of Use | WhyAlligator",
+  title: "Terms of Use",
+  description: "Read the WhyAlligator terms of use and service agreements for startup listings.",
+  alternates: {
+    canonical: "https://www.whyalligator.com/terms",
+  },
 };
 
 export default function TermsPage() {

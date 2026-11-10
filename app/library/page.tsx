@@ -3,7 +3,13 @@ import Link from "next/link";
 import { getLiveCompanies } from "@/lib/companies";
 
 export const revalidate = 60;
-export const metadata: Metadata = { title: "Library | WhyAlligator" };
+export const metadata: Metadata = {
+  title: "Library",
+  description: "Browse the WhyAlligator startup library and discover newly launched products, founder stories, and categories.",
+  alternates: {
+    canonical: "https://www.whyalligator.com/library",
+  },
+};
 
 export default async function LibraryPage() {
   const companies = await getLiveCompanies();

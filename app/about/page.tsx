@@ -3,9 +3,12 @@ import Link from "next/link";
 import { ProsePage } from "@/components/ProsePage";
 
 export const metadata: Metadata = {
-  title: "About | WhyAlligator",
+  title: "About",
   description:
     "WhyAlligator is the global launchpad and directory for the 99% of ambitious builders. List for $20 once, connect with early users and investors, and compete for $30,000 in equity-free grant funding.",
+  alternates: {
+    canonical: "https://www.whyalligator.com/about",
+  },
 };
 
 export default function AboutPage() {

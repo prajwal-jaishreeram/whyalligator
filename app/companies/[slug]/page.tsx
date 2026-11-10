@@ -17,10 +17,31 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const company = await getCompanyBySlug(slug);
-  if (!company) return { title: "Company | WhyAlligator" };
+  if (!company) {
+    return {
+      title: "Company Not Found",
+      robots: { index: false, follow: false },
+    };
+  }
+  const canonicalUrl = `https://www.whyalligator.com/companies/${company.slug}`;
   return {
-    title: `${company.company_name}: ${company.pitch} | WhyAlligator`,
+    title: `${company.company_name}: ${company.pitch}`,
     description: company.description || company.pitch,
+    alternates: {
+      canonical: canonicalUrl,
+    },
+    openGraph: {
+      title: `${company.company_name}: ${company.pitch}`,
+      description: company.description || company.pitch,
+      url: canonicalUrl,
+      images: company.logo_url ? [{ url: company.logo_url }] : ["/og-image.png"],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${company.company_name}: ${company.pitch}`,
+      description: company.description || company.pitch,
+      images: company.logo_url ? [company.logo_url] : ["/og-image.png"],
+    },
   };
 }
 

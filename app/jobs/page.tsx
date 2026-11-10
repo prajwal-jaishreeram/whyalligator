@@ -3,7 +3,13 @@ import Link from "next/link";
 import { getAllJobs } from "@/lib/companies";
 
 export const revalidate = 60;
-export const metadata: Metadata = { title: "Startup Jobs | WhyAlligator" };
+export const metadata: Metadata = {
+  title: "Startup Jobs",
+  description: "Discover open roles, internships, and founding opportunities at ambitious startups launched on WhyAlligator.",
+  alternates: {
+    canonical: "https://www.whyalligator.com/jobs",
+  },
+};
 
 export default async function JobsPage() {
   const jobs = await getAllJobs();

@@ -2,7 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ProsePage } from "@/components/ProsePage";
 
-export const metadata: Metadata = { title: "Resources | WhyAlligator" };
+export const metadata: Metadata = {
+  title: "Resources",
+  description: "Curated launch resources, founder directory navigation, and essential links on WhyAlligator.",
+  alternates: {
+    canonical: "https://www.whyalligator.com/resources",
+  },
+};
 
 export default function ResourcesPage() {
   return (

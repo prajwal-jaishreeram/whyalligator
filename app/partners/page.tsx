@@ -1,7 +1,13 @@
 import type { Metadata } from "next";
 import { ProsePage } from "@/components/ProsePage";
 
-export const metadata: Metadata = { title: "Partners | WhyAlligator" };
+export const metadata: Metadata = {
+  title: "Partners",
+  description: "Learn about the WhyAlligator partner philosophy — founders stay in complete control with zero equity taken.",
+  alternates: {
+    canonical: "https://www.whyalligator.com/partners",
+  },
+};
 
 export default function PartnersPage() {
   return (

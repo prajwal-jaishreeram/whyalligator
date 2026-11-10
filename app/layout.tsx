@@ -6,6 +6,9 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.whyalligator.com"),
+  alternates: {
+    canonical: "https://www.whyalligator.com",
+  },
   title: {
     default: "WhyAlligator — Discover & Launch Ambitious Startups",
     template: "%s | WhyAlligator",
@@ -67,7 +70,10 @@ export const metadata: Metadata = {
       { url: "/logo.png", type: "image/png" },
     ],
     shortcut: "/favicon.ico",
-    apple: [{ url: "/logo.png" }],
+    apple: [
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+      { url: "/logo.png" },
+    ],
   },
 };
 

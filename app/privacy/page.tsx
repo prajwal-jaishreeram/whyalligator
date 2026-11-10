@@ -2,7 +2,11 @@ import type { Metadata } from "next";
 import { ProsePage } from "@/components/ProsePage";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy | WhyAlligator",
+  title: "Privacy Policy",
+  description: "Read the WhyAlligator privacy policy, details on data handling, and founder account privacy.",
+  alternates: {
+    canonical: "https://www.whyalligator.com/privacy",
+  },
 };
 
 export default function PrivacyPage() {

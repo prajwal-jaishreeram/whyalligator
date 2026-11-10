@@ -3,12 +3,17 @@ import { BatchCountdownBanner } from "@/components/BatchCountdownBanner";
 import { DirectoryClient } from "@/components/DirectoryClient";
 import { getLiveCompanies } from "@/lib/companies";
 
+import type { Metadata } from "next";
+
 export const revalidate = 60;
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "WhyAlligator — Discover & Launch Ambitious Startups",
   description:
     "The global startup launchpad for ambitious founders. List your product for $20, get discovered by active customers and investors, and compete for $30,000 in equity-free grants.",
+  alternates: {
+    canonical: "https://www.whyalligator.com",
+  },
 };
 
 export default async function HomePage() {
