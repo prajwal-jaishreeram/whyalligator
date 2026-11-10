@@ -11,31 +11,6 @@ const nextConfig = {
   },
   async redirects() {
     return [
-      // Redirect apex domain to www canonical domain
-      {
-        source: "/:path*",
-        has: [
-          {
-            type: "host",
-            value: "whyalligator.com",
-          },
-        ],
-        destination: "https://www.whyalligator.com/:path*",
-        permanent: true,
-      },
-      // Redirect HTTP to HTTPS
-      {
-        source: "/:path*",
-        has: [
-          {
-            type: "header",
-            key: "x-forwarded-proto",
-            value: "http",
-          },
-        ],
-        destination: "https://www.whyalligator.com/:path*",
-        permanent: true,
-      },
       // Directory parent path redirects
       {
         source: "/companies",
