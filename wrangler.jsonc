@@ -7,7 +7,7 @@
   "workers_dev": true,
   "preview_urls": true,
   "build": {
-    "command": "npx opennextjs-cloudflare build"
+    "command": "npx opennextjs-cloudflare build --dangerouslyUseUnsupportedNextVersion"
   },
   "vars": {
     "NEXT_PUBLIC_SUPABASE_URL": "https://sgfgsmoclawrjkdzgyqa.supabase.co",
